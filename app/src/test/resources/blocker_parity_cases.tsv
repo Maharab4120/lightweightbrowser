@@ -1,0 +1,17 @@
+# Shared network-decision fixtures for Kotlin and Rust engines.
+# fields: request URL, source/page URL, resource type, expected block (1/0)
+https://doubleclick.net/ads.js	https://example.com/article	Script	1
+https://www.google-analytics.com/analytics.js	https://example.com/article	Script	1
+https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js	https://example.com/article	Script	1
+https://www.googleadservices.com/pagead/adclick	https://example.com/article	Other	1
+https://connect.facebook.net/en_US/sdk.js	https://example.com/article	Script	1
+https://i.ytimg.com/vi/abc/hqdefault.jpg	https://www.youtube.com/watch?v=abc	Image	0
+https://rr1---sn.googlevideo.com/videoplayback?expire=1	https://www.youtube.com/watch?v=abc	Media	0
+https://www.gstatic.com/images/branding/googlelogo.png	https://www.google.com/	Image	0
+https://lh3.googleusercontent.com/a/abc	https://example.com/article	Image	0
+https://example.com/logo.png	https://example.com/article	Image	0
+https://example.com/app.js	https://example.com/article	Script	0
+https://www.youtube.com/watch?v=abc	https://www.youtube.com/	Document	0
+https://youtu.be/abc	https://example.com/article	Document	0
+https://www.google.com/ads/foo.js	https://example.com/article	Script	0
+https://cdn-media.brightline.tv/config/v3/1018.json	https://edition.cnn.com/	Other	0

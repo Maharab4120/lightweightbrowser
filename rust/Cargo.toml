@@ -1,0 +1,24 @@
+[package]
+name = "lw_adblock"
+version = "0.1.0"
+edition = "2021"
+description = "JNI bridge from LightweightBrowser to Brave's adblock-rust engine"
+license = "MPL-2.0"
+
+[lib]
+name = "lw_adblock"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+adblock = { version = "0.13.6", default-features = false, features = ["embedded-domain-resolver", "full-regex-handling"] }
+jni = { version = "0.21.1", default-features = false }
+
+[profile.release]
+opt-level = "z"
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.test]
+opt-level = 1

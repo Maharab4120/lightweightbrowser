@@ -1,0 +1,229 @@
+//! JNI bridge from LightweightBrowser to Brave's adblock-rust engine.
+//!
+//! Phase 1 scope: network decisions only. Cosmetic filtering and media JS stay
+//! in Kotlin for now, and the Kotlin engine remains the default.
+
+use adblock::lists::{FilterSet, ParseOptions};
+use adblock::request::Request;
+use adblock::Engine;
+use jni::objects::{JObject, JString};
+use jni::sys::{jboolean, jstring, JNI_FALSE, JNI_TRUE};
+use jni::JNIEnv;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::RwLock;
+
+static ENGINE: RwLock<Option<Engine>> = RwLock::new(None);
+static FILTER_BYTES: AtomicUsize = AtomicUsize::new(0);
+
+/// High-signal tracker hosts already blocked by the Kotlin fallback. They are
+/// installed explicitly so the two engines agree even when upstream lists only
+/// carry narrower rules for a host.
+const REQUIRED_BLOCKS: &str = "
+||doubleclick.net^
+||googleadservices.com^
+||googlesyndication.com^
+||google-analytics.com^
+||googletagmanager.com^
+||googletagservices.com^
+||adservice.google.com^
+||adnxs.com^
+||adsrvr.org^
+||rubiconproject.com^
+||pubmatic.com^
+||criteo.com^
+||casalemedia.com^
+||openx.net^
+||yieldmo.com^
+||3lift.com^
+||adcolony.com^
+||applovin.com^
+||unityads.com^
+||vungle.com^
+||scorecardresearch.com^
+||quantserve.com^
+||hotjar.com^
+||mixpanel.com^
+||amplitude.com^
+||segment.com^
+||fullstory.com^
+||taboola.com^
+||outbrain.com^
+||bat.bing.com^
+||clarity.ms^
+||newrelic.com^
+||facebook.net^
+||connect.facebook.net^
+||platform.twitter.com^
+||amazon-adsystem.com^
+";
+
+/// These hosts carry video/images, first-party app APIs, or player configuration
+/// that some sites retry endlessly when blocked. Exceptions are installed even
+/// if an upstream list says otherwise. Document exceptions protect navigation
+/// to YouTube itself without disabling subresource filtering on YouTube pages.
+const REQUIRED_EXCEPTIONS: &str = "
+@@||googlevideo.com^
+@@||ytimg.com^
+@@||ggpht.com^
+@@||gstatic.com^
+@@||googleusercontent.com^
+@@||youtube.com^$document
+@@||youtu.be^$document
+@@||cdn-media.brightline.tv^
+";
+
+fn build_engine(filters: &str) -> Engine {
+    let mut filter_set = FilterSet::new(false);
+    filter_set.add_filter_list(REQUIRED_BLOCKS.to_string(), ParseOptions::default());
+    filter_set.add_filter_list(REQUIRED_EXCEPTIONS.to_string(), ParseOptions::default());
+    filter_set.add_filter_list(filters.to_string(), ParseOptions::default());
+    Engine::new_with_filter_set(filter_set)
+}
+
+fn should_block(engine: &Engine, url: &str, page_url: &str, resource_type: &str, method: &str) -> bool {
+    let request = match Request::new(url, page_url, resource_type, method) {
+        Ok(request) => request,
+        Err(_) => return false,
+    };
+    engine.check_network_request(&request).should_block()
+}
+
+fn get_string(env: &mut JNIEnv, value: &JString) -> Option<String> {
+    let java_str = env.get_string(value).ok()?;
+    Some(java_str.into())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeInit(
+    mut env: JNIEnv,
+    _this: JObject,
+    filters: JString,
+) -> jboolean {
+    let Some(filters) = get_string(&mut env, &filters) else {
+        return JNI_FALSE;
+    };
+    if filters.is_empty() {
+        return JNI_FALSE;
+    }
+
+    let engine = build_engine(&filters);
+    match ENGINE.write() {
+        Ok(mut guard) => {
+            FILTER_BYTES.store(filters.len(), Ordering::Relaxed);
+            *guard = Some(engine);
+            JNI_TRUE
+        }
+        Err(_) => JNI_FALSE,
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeShouldBlock(
+    mut env: JNIEnv,
+    _this: JObject,
+    url: JString,
+    page_url: JString,
+    resource_type: JString,
+    method: JString,
+) -> jboolean {
+    let (Some(url), Some(page_url), Some(resource_type), Some(method)) = (
+        get_string(&mut env, &url),
+        get_string(&mut env, &page_url),
+        get_string(&mut env, &resource_type),
+        get_string(&mut env, &method),
+    ) else {
+        return JNI_FALSE;
+    };
+
+    let guard = match ENGINE.read() {
+        Ok(guard) => guard,
+        Err(_) => return JNI_FALSE,
+    };
+    let Some(engine) = guard.as_ref() else {
+        return JNI_FALSE;
+    };
+
+    if should_block(engine, &url, &page_url, &resource_type, &method) {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeStats(
+    env: JNIEnv,
+    _this: JObject,
+) -> jstring {
+    let initialized = ENGINE.read().map(|guard| guard.is_some()).unwrap_or(false);
+    let bytes = FILTER_BYTES.load(Ordering::Relaxed);
+    let json = format!("{{\"initialized\":{},\"filterBytes\":{}}}", initialized, bytes);
+    match env.new_string(json) {
+        Ok(value) => value.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    struct Case {
+        url: &'static str,
+        page_url: &'static str,
+        resource_type: &'static str,
+        expected: bool,
+    }
+
+    fn cases() -> Vec<Case> {
+        include_str!("../../app/src/test/resources/blocker_parity_cases.tsv")
+            .lines()
+            .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+            .map(|line| {
+                let parts: Vec<&str> = line.split('\t').collect();
+                assert_eq!(parts.len(), 4, "bad fixture line: {line}");
+                Case {
+                    url: parts[0],
+                    page_url: parts[1],
+                    resource_type: parts[2],
+                    expected: parts[3] == "1",
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn builds_with_bundled_filters() {
+        let filters = include_str!("../../app/src/main/assets/adblock_filters.txt");
+        let started = Instant::now();
+        let engine = build_engine(filters);
+        let elapsed = started.elapsed();
+        eprintln!(
+            "adblock-rust engine built from {} bytes in {} ms",
+            filters.len(),
+            elapsed.as_millis()
+        );
+        drop(engine);
+        assert!(cases().iter().any(|case| case.expected));
+    }
+
+    #[test]
+    fn network_decisions_match_shared_fixtures() {
+        let filters = include_str!("../../app/src/main/assets/adblock_filters.txt");
+        let engine = build_engine(filters);
+        let mut mismatches = Vec::new();
+
+        for case in cases() {
+            let actual = should_block(&engine, case.url, case.page_url, case.resource_type, "GET");
+            if actual != case.expected {
+                mismatches.push(format!(
+                    "{} [{}] on {}: expected {}, got {}",
+                    case.url, case.resource_type, case.page_url, case.expected, actual
+                ));
+            }
+        }
+
+        assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+    }
+}

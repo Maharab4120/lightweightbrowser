@@ -1,0 +1,18 @@
+# IDE
+.idea/
+
+# Gradle
+.gradle/
+
+# Local configuration
+local.properties
+
+# Generated build files
+app/build/
+rust/target/
+
+# Cached filter files
+tools/.filter-cache/
+
+# Binary packages
+*.apk

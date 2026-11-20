@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Shortcuts"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#202124"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Grid of Shortcuts -->
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="4"
+            android:rowCount="2"
+            android:alignmentMode="alignBounds"
+            android:useDefaultMargins="true">
+
+            <!-- Shortcut Item 1: Google -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:tag="https://www.google.com">
+
+                <ImageView android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_search" android:tint="#4285F4"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Google" android:layout_marginTop="8dp" android:textSize="12sp"/>
+            </LinearLayout>
+
+            <!-- Shortcut Item 2: YouTube -->
+            <LinearLayout
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_columnWeight="1" android:orientation="vertical"
+                android:gravity="center" android:padding="8dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:tag="https://www.youtube.com">
+
+                <ImageView android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_gallery" android:tint="#FF0000"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="YouTube" android:layout_marginTop="8dp" android:textSize="12sp"/>
+            </LinearLayout>
+
+            <!-- Shortcut Item 3: GitHub -->
+            <LinearLayout
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_columnWeight="1" android:orientation="vertical"
+                android:gravity="center" android:padding="8dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:tag="https://github.com">
+
+                <ImageView android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_share" android:tint="#000000"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="GitHub" android:layout_marginTop="8dp" android:textSize="12sp"/>
+            </LinearLayout>
+
+            <!-- Shortcut Item 4: Reddit -->
+            <LinearLayout
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_columnWeight="1" android:orientation="vertical"
+                android:gravity="center" android:padding="8dp"
+                android:clickable="true" android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:tag="https://www.reddit.com">
+
+                <ImageView android:layout_width="48dp" android:layout_height="48dp"
+                    android:src="@android:drawable/ic_dialog_info" android:tint="#FF4500"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Reddit" android:layout_marginTop="8dp" android:textSize="12sp"/>
+            </LinearLayout>
+
+        </GridLayout>
+    </LinearLayout>
+</ScrollView>
