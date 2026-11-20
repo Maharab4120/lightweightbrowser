@@ -18,6 +18,7 @@ import android.os.Message
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -52,6 +53,10 @@ class MainActivity : Activity() {
     private lateinit var newTabButton: TextView
     private lateinit var shieldButton: TextView
     private lateinit var tabBarContainer: LinearLayout
+    private lateinit var tabStrip: View
+    private lateinit var topToolbar: View
+    private lateinit var bottomToolbar: View
+    private lateinit var chromePeek: View
     private lateinit var tabContentContainer: FrameLayout
     private lateinit var backButton: TextView
     private lateinit var forwardButton: TextView
@@ -64,6 +69,7 @@ class MainActivity : Activity() {
     private var mediaPlaying = false
     private var appInBackground = false
     private var resumeAttempts = 0
+    private var chromeVisible = true
     private val mediaHandler = Handler(Looper.getMainLooper())
     private val stopMediaRunnable = Runnable {
         MediaPlaybackService.stop(this@MainActivity)
@@ -174,6 +180,10 @@ class MainActivity : Activity() {
         newTabButton = findViewById(R.id.newTabButton)
         shieldButton = findViewById(R.id.shieldButton)
         tabBarContainer = findViewById(R.id.tabBarContainer)
+        topToolbar = findViewById(R.id.topToolbar)
+        tabStrip = findViewById(R.id.tabStrip)
+        bottomToolbar = findViewById(R.id.bottomToolbar)
+        chromePeek = findViewById(R.id.chromePeek)
         tabContentContainer = findViewById(R.id.tabContentContainer)
         backButton = findViewById(R.id.backButton)
         forwardButton = findViewById(R.id.forwardButton)
@@ -213,6 +223,8 @@ class MainActivity : Activity() {
         homeButton.setOnClickListener {
             currentTab()?.let { showSpeedDial(it) }
         }
+
+        chromePeek.setOnClickListener { setChromeVisible(true) }
     }
 
     private fun restoreTabs(state: Bundle, ids: java.util.ArrayList<String>) {
@@ -337,6 +349,7 @@ class MainActivity : Activity() {
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
 
             addJavascriptInterface(browserJsBridge, "LWBridge")
+            attachChromeGesture(this)
 
             webChromeClient = object : WebChromeClient() {
                 // Swallow popups opened with window.open()/target="_blank".
@@ -458,6 +471,7 @@ class MainActivity : Activity() {
                     }
                     updateTabBar()
                     updateNavButtons()
+                    if (tab.id == currentTabId) setChromeVisible(false)
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
@@ -637,6 +651,7 @@ class MainActivity : Activity() {
         urlEditText.setText(currentTab()?.url.orEmpty())
         updateTabBar()
         updateNavButtons()
+        setChromeVisible(currentTab()?.webView == null)
     }
 
     private fun closeTab(tabId: String) {
@@ -693,6 +708,48 @@ class MainActivity : Activity() {
     private fun setButtonEnabled(button: TextView, enabled: Boolean) {
         button.isEnabled = enabled
         button.alpha = if (enabled) 1f else 0.35f
+    }
+
+    /**
+     * Collapse the browser chrome while a page is being read. The WebView then
+     * gets the full height instead of permanently losing 156dp to fixed bars.
+     */
+    private fun setChromeVisible(visible: Boolean) {
+        if (chromeVisible == visible) return
+        chromeVisible = visible
+        val state = if (visible) View.VISIBLE else View.GONE
+        topToolbar.visibility = state
+        tabStrip.visibility = state
+        bottomToolbar.visibility = state
+        chromePeek.visibility = if (visible) View.GONE else View.VISIBLE
+    }
+
+    private fun attachChromeGesture(webView: WebView) {
+        var startY = 0f
+        var moved = false
+        webView.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startY = event.y
+                    moved = false
+                }
+                MotionEvent.ACTION_UP -> {
+                    val dy = event.y - startY
+                    if (kotlin.math.abs(dy) > dp(30)) {
+                        // Finger up reveals more page, finger down brings controls back.
+                        setChromeVisible(dy > 0)
+                    } else if (!moved && event.y <= dp(100)) {
+                        setChromeVisible(true)
+                    }
+                }
+            }
+            if (event.actionMasked == MotionEvent.ACTION_MOVE &&
+                kotlin.math.abs(event.y - startY) > dp(8)
+            ) {
+                moved = true
+            }
+            false
+        }
     }
 
     private fun showBlockerDialog() {
@@ -1021,6 +1078,11 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        if (!chromeVisible) {
+            setChromeVisible(true)
+            return
+        }
+
         val webView = currentTab()?.webView
         if (webView?.canGoBack() == true) {
             webView.goBack()

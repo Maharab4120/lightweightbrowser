@@ -7,6 +7,7 @@
 
     <!-- Dark omnibox row: familiar layout, bolder identity. Framework widgets only. -->
     <LinearLayout
+        android:id="@+id/topToolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/toolbar_height"
         android:orientation="horizontal"
@@ -80,6 +81,7 @@
     </LinearLayout>
 
     <HorizontalScrollView
+        android:id="@+id/tabStrip"
         android:layout_width="match_parent"
         android:layout_height="@dimen/tab_bar_height"
         android:background="@color/brand_primary_dark"
@@ -95,6 +97,17 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
+    <!-- Shown only while the page is using the full screen; tap to restore controls. -->
+    <ImageButton
+        android:id="@+id/chromePeek"
+        android:layout_width="match_parent"
+        android:layout_height="16dp"
+        android:background="@color/brand_primary_dark"
+        android:contentDescription="Show browser controls"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_expand_more"
+        android:visibility="gone" />
+
     <FrameLayout
         android:id="@+id/tabContentContainer"
         android:layout_width="match_parent"
@@ -102,6 +115,7 @@
         android:layout_weight="1" />
 
     <LinearLayout
+        android:id="@+id/bottomToolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/bottom_bar_height"
         android:orientation="horizontal"
