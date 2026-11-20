@@ -3,6 +3,7 @@ package com.example.lightweightbrowser
 import android.content.Context
 import android.webkit.WebResourceRequest
 import java.net.URI
+import java.util.Locale
 
 data class BlockerRequest(
     val url: String,
@@ -12,6 +13,62 @@ data class BlockerRequest(
     val method: String,
     val isForMainFrame: Boolean
 )
+
+/** Pure helpers shared by the WebView layer and JVM tests. */
+internal object RequestContext {
+
+    /**
+     * WebView does not expose an initiator. The Referer header is the best
+     * available signal for subframes and XHR; fall back to the tab URL.
+     */
+    fun pageUrl(headers: Map<String, String>, tabUrl: String?): String {
+        val referer = header(headers, "Referer")
+        return if (!referer.isNullOrBlank()) referer else tabUrl.orEmpty()
+    }
+
+    /** WebView header maps are not guaranteed to preserve header casing. */
+    fun header(headers: Map<String, String>, name: String): String? =
+        headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
+
+    fun hostOf(url: String?): String? {
+        if (url.isNullOrEmpty()) return null
+        return try {
+            URI(url).host?.lowercase(Locale.ROOT)?.trimEnd('.')
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+internal data class BlockedResponseSpec(
+    val mimeType: String,
+    val encoding: String?,
+    val statusCode: Int,
+    val reason: String,
+    val body: ByteArray,
+    val headers: Map<String, String> = mapOf("Cache-Control" to "no-store")
+)
+
+/** Benign empty responses keep blocked subresources from retrying in a loop. */
+internal object BlockedResponses {
+
+    private val transparentGif = byteArrayOf(
+        71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128.toByte(), 0, 0, 0, 0, 0,
+        255.toByte(), 255.toByte(), 255.toByte(), 33, 249.toByte(), 4, 1, 0, 0, 0, 0, 44,
+        0, 0, 0, 0,
+        1, 0, 1, 0, 0, 2, 1, 68, 0, 59
+    )
+
+    fun spec(resourceType: String): BlockedResponseSpec = when (resourceType.lowercase(Locale.ROOT)) {
+        "script" -> BlockedResponseSpec("application/javascript", "UTF-8", 200, "OK", ByteArray(0))
+        "stylesheet" -> BlockedResponseSpec("text/css", "UTF-8", 200, "OK", ByteArray(0))
+        "image" -> BlockedResponseSpec("image/gif", null, 200, "OK", transparentGif.copyOf())
+        "xmlhttprequest" -> BlockedResponseSpec(
+            "application/json", "UTF-8", 200, "OK", "{}".toByteArray(Charsets.UTF_8)
+        )
+        else -> BlockedResponseSpec("text/plain", "UTF-8", 200, "OK", ByteArray(0))
+    }
+}
 
 interface BlockerEngine {
     val displayName: String
@@ -161,7 +218,7 @@ object BlockerEngineManager {
             RustAdBlocker.nativeShouldBlock(
                 url,
                 pageUrl ?: "https://${pageHost ?: "unknown.invalid"}/",
-                "Document",
+                "document",
                 "GET"
             )
         } else {
@@ -197,26 +254,54 @@ object BlockerEngineManager {
 }
 
 object ResourceType {
-    fun from(request: WebResourceRequest): String {
-        if (request.isForMainFrame) return "Document"
 
-        val path = request.url.path?.lowercase().orEmpty()
-        val accept = request.requestHeaders["Accept"]?.lowercase().orEmpty()
-        if (request.requestHeaders["X-Requested-With"]?.contains("XMLHttpRequest", true) == true) {
-            return "Xmlhttprequest"
+    fun from(request: WebResourceRequest): String = from(
+        isForMainFrame = request.isForMainFrame,
+        path = request.url.path,
+        headers = request.requestHeaders
+    )
+
+    /**
+     * Pure overload so WebView classification can be exercised by JVM tests.
+     * Values are the lowercase resource types expected by adblock-rust.
+     */
+    fun from(isForMainFrame: Boolean, path: String?, headers: Map<String, String>): String {
+        if (isForMainFrame) return "document"
+
+        val lowerPath = path?.lowercase(Locale.ROOT).orEmpty()
+        val accept = RequestContext.header(headers, "Accept")?.lowercase(Locale.ROOT).orEmpty()
+        val requestedWith =
+            RequestContext.header(headers, "X-Requested-With")?.lowercase(Locale.ROOT).orEmpty()
+        val fetchDest = RequestContext.header(headers, "Sec-Fetch-Dest")?.lowercase(Locale.ROOT).orEmpty()
+
+        if (requestedWith.contains("xmlhttprequest")) return "xmlhttprequest"
+        when (fetchDest) {
+            "empty" -> return "xmlhttprequest"
+            "script" -> return "script"
+            "style" -> return "stylesheet"
+            "image", "imageset" -> return "image"
+            "font" -> return "font"
+            "media" -> return "media"
+            "iframe", "frame", "subdocument", "sub_frame", "document" -> return "subdocument"
+            "object", "embed" -> return "object"
+            "ping", "beacon" -> return "ping"
+            "csp_report" -> return "csp_report"
         }
-        if (path.hasExtension(".js", ".mjs", ".cjs") || accept.contains("javascript")) return "Script"
-        if (path.hasExtension(".css") || accept.contains("text/css")) return "Stylesheet"
-        if (path.hasExtension(".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".avif") ||
+
+        if (lowerPath.hasExtension(".js", ".mjs", ".cjs") || accept.contains("javascript")) {
+            return "script"
+        }
+        if (lowerPath.hasExtension(".css") || accept.contains("text/css")) return "stylesheet"
+        if (lowerPath.hasExtension(".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".avif") ||
             accept.startsWith("image/")
-        ) return "Image"
-        if (path.hasExtension(".mp4", ".webm", ".mp3", ".ogg", ".m4a", ".wav") ||
+        ) return "image"
+        if (lowerPath.hasExtension(".mp4", ".webm", ".mp3", ".ogg", ".m4a", ".wav", ".m3u8") ||
             accept.startsWith("media/")
-        ) return "Media"
-        if (path.hasExtension(".woff", ".woff2", ".ttf", ".otf", ".eot") || accept.contains("font")) {
-            return "Font"
-        }
-        return "Other"
+        ) return "media"
+        if (lowerPath.hasExtension(".woff", ".woff2", ".ttf", ".otf", ".eot") ||
+            accept.contains("font")
+        ) return "font"
+        return "other"
     }
 
     private fun String.hasExtension(vararg suffixes: String): Boolean =

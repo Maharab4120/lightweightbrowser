@@ -10,6 +10,9 @@ class Tab(
     val id: String = UUID.randomUUID().toString()
 ) {
     var title: String = "New Tab"
+
+    /** Read by WebView callbacks that may run off the main thread. */
+    @Volatile
     var url: String = ""
     var webView: WebView? = null
     var progressBar: ProgressBar? = null

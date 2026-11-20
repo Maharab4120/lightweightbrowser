@@ -367,18 +367,29 @@ class MainActivity : Activity() {
                 ): WebResourceResponse? {
                     if (request == null) return null
 
+                    val headers: Map<String, String> = request.requestHeaders
+                    val pageUrl = RequestContext.pageUrl(headers, tab.url)
+                    val resourceType = ResourceType.from(request)
                     val blockerRequest = BlockerRequest(
                         url = request.url.toString(),
-                        pageUrl = tab.url.orEmpty(),
-                        pageHost = tab.currentHost,
-                        resourceType = ResourceType.from(request),
+                        pageUrl = pageUrl,
+                        pageHost = RequestContext.hostOf(pageUrl) ?: tab.currentHost,
+                        resourceType = resourceType,
                         method = request.method ?: "GET",
                         isForMainFrame = request.isForMainFrame
                     )
                     if (BlockerEngineManager.shouldBlock(blockerRequest)) {
                         blockedCount.incrementAndGet()
                         view?.post { updateBlockerUi() }
-                        return blockedResponse()
+                        val spec = BlockedResponses.spec(resourceType)
+                        return WebResourceResponse(
+                            spec.mimeType,
+                            spec.encoding,
+                            spec.statusCode,
+                            spec.reason,
+                            spec.headers,
+                            ByteArrayInputStream(spec.body)
+                        )
                     }
 
                     return super.shouldInterceptRequest(view, request)
@@ -389,8 +400,11 @@ class MainActivity : Activity() {
                     request: WebResourceRequest?
                 ): Boolean {
                     val url = request?.url?.toString() ?: return true
+                    val headers: Map<String, String> = request.requestHeaders
+                    val sourceUrl = RequestContext.pageUrl(headers, tab.url)
+                    val sourceHost = RequestContext.hostOf(tab.url) ?: tab.currentHost
 
-                    if (BlockerEngineManager.shouldBlockNavigation(url, tab.currentHost, tab.url)) {
+                    if (BlockerEngineManager.shouldBlockNavigation(url, sourceHost, sourceUrl)) {
                         blockedCount.incrementAndGet()
                         view?.post { updateBlockerUi() }
                         return true
@@ -844,17 +858,6 @@ class MainActivity : Activity() {
             "OFF ${blockedCount.get()}"
         }
         shieldButton.alpha = if (enabled) 1f else 0.5f
-    }
-
-    private fun blockedResponse(): WebResourceResponse {
-        return WebResourceResponse(
-            "text/plain",
-            "UTF-8",
-            403,
-            "Blocked",
-            emptyMap<String, String>(),
-            ByteArrayInputStream(ByteArray(0))
-        )
     }
 
     private fun normalizeUrl(input: String): String {
