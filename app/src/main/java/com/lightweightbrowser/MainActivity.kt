@@ -41,7 +41,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import java.io.ByteArrayInputStream
-import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -421,7 +420,10 @@ class MainActivity : Activity() {
                             view?.loadUrl(secureUrl, navigationHeaders())
                             Unit
                         }
-                        if (handleYouTubeHandoff(secureUrl, loadHere)) return true
+                        // Never let a subframe or ad iframe launch the YouTube app.
+                        if (request.isForMainFrame &&
+                            handleYouTubeHandoff(secureUrl, loadHere)
+                        ) return true
                         loadHere()
                         return true
                     }
@@ -545,29 +547,26 @@ class MainActivity : Activity() {
      * native app, which supports real background playback and media controls.
      */
     private fun handleYouTubeHandoff(url: String, openHere: () -> Unit): Boolean {
-        val host = hostFrom(url)?.lowercase(Locale.ROOT) ?: return false
-        val isYouTube = host == "youtube.com" || host.endsWith(".youtube.com") ||
-            host == "youtu.be" || host.endsWith(".youtu.be")
-        if (!isYouTube) return false
+        val target = YouTubeTarget.from(url) ?: return false
 
         when (prefs.getString(KEY_YOUTUBE_HANDOFF, HANDOFF_ASK)) {
             HANDOFF_ALWAYS -> {
-                openInYouTubeApp(url, openHere)
+                openInYouTubeApp(target, url, openHere)
                 return true
             }
             HANDOFF_NEVER -> return false
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Open in YouTube?")
+            .setTitle("Open in ${target.displayName}?")
             .setMessage(
-                "The YouTube app supports background playback, screen-off audio, " +
+                "The ${target.displayName} app supports background playback, screen-off audio, " +
                     "and real media controls. WebView cannot."
             )
-            .setPositiveButton("Open in app") { _, _ -> openInYouTubeApp(url, openHere) }
+            .setPositiveButton("Open in app") { _, _ -> openInYouTubeApp(target, url, openHere) }
             .setNeutralButton("Always in app") { _, _ ->
                 prefs.edit().putString(KEY_YOUTUBE_HANDOFF, HANDOFF_ALWAYS).apply()
-                openInYouTubeApp(url, openHere)
+                openInYouTubeApp(target, url, openHere)
             }
             .setNegativeButton("Open here") { _, _ ->
                 prefs.edit().putString(KEY_YOUTUBE_HANDOFF, HANDOFF_NEVER).apply()
@@ -577,24 +576,30 @@ class MainActivity : Activity() {
         return true
     }
 
-    private fun openInYouTubeApp(url: String, fallback: () -> Unit) {
-        val host = hostFrom(url)?.lowercase(Locale.ROOT).orEmpty()
-        val targetPackage = if (host.contains("music.youtube.com")) {
-            "com.google.android.apps.youtube.music"
-        } else {
-            "com.google.android.youtube"
+    private fun openInYouTubeApp(
+        target: YouTubeAppTarget,
+        url: String,
+        fallback: () -> Unit
+    ) {
+        for (packageName in target.packageNames) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                setPackage(packageName)
+                addCategory(Intent.CATEGORY_DEFAULT)
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                startActivity(intent)
+                return
+            } catch (e: ActivityNotFoundException) {
+                // Try the next available app package.
+            } catch (e: SecurityException) {
+                // Package is restricted on this device; try the next one.
+            }
         }
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            setPackage(targetPackage)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "YouTube app not installed - opening here", Toast.LENGTH_SHORT)
-                .show()
-            fallback()
-        }
+        Toast.makeText(this, "${target.displayName} app not available - opening here", Toast.LENGTH_SHORT)
+            .show()
+        fallback()
     }
 
     private fun loadUrlInCurrentTab(input: String) {
