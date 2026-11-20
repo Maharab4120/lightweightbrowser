@@ -3,84 +3,86 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="@color/surface_alt">
 
-    <!-- Compact toolbar: address bar + actions. No AppCompat/Material widgets. -->
+    <!-- Dark omnibox row: familiar layout, bolder identity. Framework widgets only. -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/toolbar_height"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#F1F3F4"
-        android:paddingStart="6dp"
-        android:paddingTop="6dp"
-        android:paddingEnd="6dp"
-        android:paddingBottom="6dp">
+        android:background="@color/brand_primary"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
         <EditText
             android:id="@+id/urlEditText"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="@dimen/omnibox_height"
             android:layout_weight="1"
-            android:background="@android:color/white"
-            android:drawableStart="@android:drawable/ic_menu_search"
-            android:drawablePadding="8dp"
+            android:background="@drawable/url_field_background"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="10dp"
             android:hint="Search or type URL"
             android:imeOptions="actionGo"
             android:inputType="textUri"
             android:maxLines="1"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:singleLine="true"
-            android:textColor="#202124"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
             android:textSize="15sp" />
 
         <TextView
             android:id="@+id/goButton"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:gravity="center"
-            android:minWidth="40dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:text="GO"
-            android:textColor="#1A73E8"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="Go" />
+            android:layout_width="44dp"
+            android:layout_height="@dimen/omnibox_height"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/toolbar_action_background"
+            android:contentDescription="Go"
+            android:drawableStart="@drawable/ic_arrow_forward"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:text=""
+            android:textSize="0sp" />
 
         <TextView
             android:id="@+id/newTabButton"
             android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:gravity="center"
-            android:text="+"
-            android:textColor="#5F6368"
-            android:textSize="24sp"
+            android:layout_height="@dimen/omnibox_height"
+            android:layout_marginStart="4dp"
             android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="New tab" />
+            android:contentDescription="New tab"
+            android:drawableStart="@drawable/ic_add"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:text=""
+            android:textSize="0sp" />
 
         <TextView
             android:id="@+id/shieldButton"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="@dimen/omnibox_height"
+            android:layout_marginStart="4dp"
+            android:minWidth="76dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:background="@drawable/shield_pill_background"
+            android:contentDescription="Ad blocking shield"
+            android:drawableStart="@drawable/ic_shield_small"
+            android:drawablePadding="5dp"
             android:gravity="center"
-            android:minWidth="72dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
             android:text="SHIELD 0"
-            android:textColor="#188038"
+            android:textColor="@color/icon_on_dark"
             android:textSize="11sp"
-            android:textStyle="bold"
-            android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="Ad blocking shield" />
+            android:textStyle="bold" />
     </LinearLayout>
 
     <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="#FAFAFA"
+        android:layout_height="@dimen/tab_bar_height"
+        android:background="@color/brand_primary_dark"
         android:paddingStart="6dp"
         android:paddingEnd="6dp"
         android:scrollbars="none">
@@ -101,60 +103,68 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:background="#F1F3F4"
-        android:gravity="center_vertical"
+        android:layout_height="@dimen/bottom_bar_height"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:gravity="center_vertical"
+        android:background="@color/brand_primary"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp">
 
         <TextView
             android:id="@+id/backButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="←"
-            android:textColor="#3C4043"
-            android:textSize="24sp"
             android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="Back" />
+            android:contentDescription="Back"
+            android:drawablePadding="2dp"
+            android:drawableTop="@drawable/ic_back"
+            android:gravity="center"
+            android:text="Back"
+            android:textColor="@color/nav_item_colors"
+            android:textSize="10sp" />
 
         <TextView
             android:id="@+id/forwardButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="→"
-            android:textColor="#3C4043"
-            android:textSize="24sp"
             android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="Forward" />
+            android:contentDescription="Forward"
+            android:drawablePadding="2dp"
+            android:drawableTop="@drawable/ic_forward"
+            android:gravity="center"
+            android:text="Forward"
+            android:textColor="@color/nav_item_colors"
+            android:textSize="10sp" />
 
         <TextView
             android:id="@+id/reloadButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="⟳"
-            android:textColor="#3C4043"
-            android:textSize="22sp"
             android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="Reload" />
+            android:contentDescription="Reload"
+            android:drawablePadding="2dp"
+            android:drawableTop="@drawable/ic_reload"
+            android:gravity="center"
+            android:text="Reload"
+            android:textColor="@color/nav_item_colors"
+            android:textSize="10sp" />
 
         <TextView
             android:id="@+id/homeButton"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="⌂"
-            android:textColor="#3C4043"
-            android:textSize="24sp"
             android:background="?android:attr/selectableItemBackground"
-            android:contentDescription="New tab page" />
+            android:contentDescription="New tab page"
+            android:drawablePadding="2dp"
+            android:drawableTop="@drawable/ic_home"
+            android:gravity="center"
+            android:text="Home"
+            android:textColor="@color/nav_item_colors"
+            android:textSize="10sp" />
     </LinearLayout>
 
 </LinearLayout>

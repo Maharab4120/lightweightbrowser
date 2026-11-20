@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.net.Uri
 import android.net.VpnService
 import android.os.Build
@@ -36,6 +35,7 @@ import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -297,13 +297,14 @@ class MainActivity : Activity() {
         tab.rootView?.let { tabContentContainer.removeView(it) }
 
         val progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = true
+            isIndeterminate = false
+            progressDrawable = resources.getDrawable(R.drawable.progress_drawable, theme)
             visibility = View.GONE
             layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, dp(3), Gravity.TOP)
         }
 
         val webView = WebView(this).apply {
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(resources.getColor(R.color.surface, theme))
             layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
 
             settings.apply {
@@ -706,6 +707,7 @@ class MainActivity : Activity() {
         }
         val dnsLabel = "DNS filter: ${if (DnsFilterService.isRunning) "ON" else "OFF"} (tap to switch)"
 
+        // Keep the option order stable: handleBlockerOption() maps by index.
         val options = arrayOf(
             if (enabled) "Turn blocking off" else "Turn blocking on",
             "Reset blocked count",
@@ -716,34 +718,68 @@ class MainActivity : Activity() {
             dnsLabel,
             "Close"
         )
+        val icons = arrayOf(
+            R.drawable.ic_shield_small,
+            R.drawable.ic_counter,
+            R.drawable.ic_delete,
+            R.drawable.ic_delete,
+            R.drawable.ic_arrow_forward,
+            R.drawable.ic_tune,
+            R.drawable.ic_tune,
+            R.drawable.ic_close
+        )
 
-        // A custom view keeps every option visible on devices where the
-        // platform AlertDialog list is squeezed to zero height by a message.
-        val padding = (16 * resources.displayMetrics.density).toInt()
-        val rowPadding = (12 * resources.displayMetrics.density).toInt()
-        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val padding = dp(16)
+        val rowPadding = dp(12)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padding, padding, padding, padding)
+        }
         container.addView(TextView(this).apply {
-            text = "Blocking: $state · ${blockedCount.get()} blocked"
-            setPadding(padding, padding, padding, rowPadding)
-            textSize = 14f
+            text = "Blocking $state  ·  ${blockedCount.get()} blocked"
+            textSize = 13f
+            setTextColor(resources.getColor(R.color.text_secondary, theme))
+            setPadding(rowPadding, 0, rowPadding, padding)
         })
 
         lateinit var dialog: AlertDialog
         options.forEachIndexed { index, label ->
-            container.addView(TextView(this).apply {
-                text = label
-                setPadding(padding, rowPadding, padding, rowPadding)
-                textSize = 16f
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
                 isClickable = true
-                setOnClickListener {
-                    dialog.dismiss()
-                    handleBlockerOption(index, handoffMode, clearOnExit)
+                background = resources.getDrawable(R.drawable.settings_row_background, theme)
+                setPadding(rowPadding, rowPadding, rowPadding, rowPadding)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(8) }
+            }
+            row.addView(ImageView(this).apply {
+                setImageResource(icons[index])
+                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
+                    rightMargin = rowPadding
                 }
             })
+            row.addView(TextView(this).apply {
+                text = label
+                textSize = 15f
+                setTextColor(resources.getColor(R.color.text_primary, theme))
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            })
+            row.setOnClickListener {
+                dialog.dismiss()
+                handleBlockerOption(index, handoffMode, clearOnExit)
+            }
+            container.addView(row)
         }
 
         dialog = AlertDialog.Builder(this)
-            .setTitle("Privacy shield")
+            .setTitle("Settings")
             .setView(ScrollView(this).apply { addView(container) })
             .create()
         dialog.show()

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="32dp"
+    android:layout_height="36dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingStart="12dp"
@@ -15,18 +15,18 @@
         android:layout_height="wrap_content"
         android:text="Tab"
         android:textSize="12sp"
-        android:maxWidth="100dp"
+        android:maxWidth="120dp"
         android:ellipsize="end"
         android:singleLine="true"
-        android:textColor="#3C4043"/>
+        android:textColor="@color/text_primary" />
 
     <ImageButton
         android:id="@+id/closeTabButton"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:layout_marginStart="6dp"
+        android:src="@drawable/ic_close"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:scaleType="centerInside"
-        android:tint="#5F6368"
-        android:layout_marginStart="4dp"/>
+        android:contentDescription="Close tab" />
 </LinearLayout>

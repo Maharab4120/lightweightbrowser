@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_primary">#FF12141A</color>
+    <color name="brand_primary_dark">#FF0B0D12</color>
+    <color name="brand_accent">#FFFF704B</color>
+    <color name="brand_accent_dark">#FFE8542C</color>
+
+    <color name="surface">#FF1B1E26</color>
+    <color name="surface_alt">#FF12141A</color>
+    <color name="text_primary">#FFF2F3F5</color>
+    <color name="text_secondary">#FFAEB3BD</color>
+    <color name="divider">#FF343946</color>
+
+    <color name="icon_on_dark">#FFF5F6F7</color>
+    <color name="icon_disabled">#FF626878</color>
+    <color name="shield_pill">#FF272B35</color>
+
+    <color name="tab_active">#FF3A3F4C</color>
+    <color name="tab_inactive">#FF2A2E39</color>
+
+    <color name="shortcut_card">#FF222631</color>
+    <color name="shortcut_card_border">#FF353A46</color>
+
+    <color name="dialog_surface">#FF1B1E26</color>
+    <color name="dialog_row">#FF242833</color>
+</resources>
