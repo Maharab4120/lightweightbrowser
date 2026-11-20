@@ -126,6 +126,18 @@ internal class KotlinBlockerCore {
         return isBlockedHost(host, pageHost)
     }
 
+    /**
+     * Host-only decision for the optional DNS filter. There is no page context,
+     * so third-party rules are deliberately not applied here.
+     */
+    fun shouldBlockDns(host: String): Boolean {
+        if (!enabled) return false
+        val normalized = host.lowercase(Locale.ROOT).trimEnd('.')
+        if (normalized.isEmpty()) return false
+        if (hostMatches(normalized, allowHosts)) return false
+        return hostMatches(normalized, blockHosts)
+    }
+
     private fun parseHttpUrl(url: String): Pair<String, String>? {
         val parsed = try {
             URI(url)

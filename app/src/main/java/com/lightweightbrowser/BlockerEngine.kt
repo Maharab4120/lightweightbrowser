@@ -228,6 +228,12 @@ object BlockerEngineManager {
         return false
     }
 
+    /**
+     * Host-only decision for the optional DNS filter. DNS queries have no page
+     * context, so this uses the conservative host rules shared with Kotlin.
+     */
+    fun shouldBlockDns(host: String): Boolean = AdBlocker.shouldBlockDns(host)
+
     fun cosmeticJsFor(host: String): String = AdBlocker.cosmeticJsFor(host)
 
     private fun engine(): BlockerEngine = if (rustActive && RustAdBlocker.available) rustEngine else kotlinEngine

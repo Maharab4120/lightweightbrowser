@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -703,6 +704,7 @@ class MainActivity : Activity() {
             HANDOFF_NEVER -> "YouTube: open in browser"
             else -> "YouTube: ask each time"
         }
+        val dnsLabel = "DNS filter: ${if (DnsFilterService.isRunning) "ON" else "OFF"} (tap to switch)"
 
         val options = arrayOf(
             if (enabled) "Turn blocking off" else "Turn blocking on",
@@ -711,6 +713,7 @@ class MainActivity : Activity() {
             "Clear data on exit: ${if (clearOnExit) "ON" else "OFF"}",
             youtubeLabel,
             "Engine: ${BlockerEngineManager.activeEngineName()} (tap to switch)",
+            dnsLabel,
             "Close"
         )
 
@@ -789,6 +792,7 @@ class MainActivity : Activity() {
                 ).show()
             }
             5 -> toggleFilterEngine()
+            6 -> toggleDnsFilter()
         }
     }
 
@@ -796,6 +800,7 @@ class MainActivity : Activity() {
         val next = !BlockerEngineManager.isEnabled()
         BlockerEngineManager.setEnabled(next)
         prefs.edit().putBoolean(KEY_BLOCKER_ENABLED, next).apply()
+        if (!next && DnsFilterService.isRunning) disableDnsFilter(showToast = false)
         updateBlockerUi()
         reloadCurrentPage()
         Toast.makeText(
@@ -829,6 +834,59 @@ class MainActivity : Activity() {
                     Toast.makeText(this, detail, Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun toggleDnsFilter() {
+        if (DnsFilterService.isRunning) {
+            disableDnsFilter()
+            return
+        }
+
+        val consent = VpnService.prepare(this)
+        if (consent != null) {
+            startActivityForResult(consent, REQUEST_VPN)
+            return
+        }
+        enableDnsFilter()
+    }
+
+    private fun enableDnsFilter() {
+        if (!BlockerEngineManager.isEnabled()) {
+            Toast.makeText(this, "Turn ad blocking on first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        DnsFilterPrefs.setEnabled(this, true)
+        val intent = Intent(this, DnsFilterService::class.java).apply {
+            action = DnsFilterService.ACTION_START
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+        Toast.makeText(this, "Starting DNS filter...", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun disableDnsFilter(showToast: Boolean = true) {
+        DnsFilterPrefs.setEnabled(this, false)
+        val intent = Intent(this, DnsFilterService::class.java).apply {
+            action = DnsFilterService.ACTION_STOP
+        }
+        startService(intent)
+        if (showToast) {
+            Toast.makeText(this, "DNS filter off", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_VPN) return
+        if (resultCode == RESULT_OK) {
+            enableDnsFilter()
+        } else {
+            DnsFilterPrefs.setEnabled(this, false)
+            Toast.makeText(this, "DNS filter not enabled", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -993,6 +1051,7 @@ class MainActivity : Activity() {
         private const val KEY_TAB_TITLES = "tab_titles"
         private const val KEY_CURRENT_TAB = "current_tab"
         private const val REQUEST_POST_NOTIFICATIONS = 42
+        private const val REQUEST_VPN = 43
         private const val MAX_RESUME_ATTEMPTS = 8
         private const val KEY_YOUTUBE_HANDOFF = "youtube_handoff"
         private const val HANDOFF_ASK = "ask"

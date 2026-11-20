@@ -238,6 +238,9 @@ object AdBlocker {
     fun shouldBlockNavigation(url: String, pageHost: String?): Boolean =
         core.shouldBlockNavigation(url, pageHost)
 
+    /** Host-only decision used by the opt-in DNS filter. */
+    fun shouldBlockDns(host: String): Boolean = core.shouldBlockDns(host)
+
     private fun hostMatchesDomain(host: String, domain: String): Boolean {
         return host == domain || host.endsWith(".$domain")
     }
