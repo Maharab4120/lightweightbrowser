@@ -303,7 +303,7 @@ class MainActivity : Activity() {
             tile.findViewById<TextView>(R.id.shortcutLabel).text = shortcut.name
             tile.setOnClickListener { loadUrlInTab(tab, normalizeUrl(shortcut.url)) }
             tile.setOnLongClickListener {
-                confirmRemoveShortcut(view, tab, shortcut)
+                showShortcutOptions(view, tab, shortcut, index)
                 true
             }
             grid.addView(tile, shortcutTileParams(index))
@@ -317,7 +317,7 @@ class MainActivity : Activity() {
             background = resources.getDrawable(R.drawable.shortcut_badge_add_background, theme)
         }
         addTile.findViewById<TextView>(R.id.shortcutLabel).text = "Add"
-        addTile.setOnClickListener { showAddShortcutDialog(view, tab) }
+        addTile.setOnClickListener { showShortcutDialog(view, tab, -1, null) }
         grid.addView(addTile, shortcutTileParams(ShortcutStore.load(this).size))
     }
 
@@ -334,6 +334,19 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun showShortcutOptions(view: View, tab: Tab, shortcut: Shortcut, index: Int) {
+        AlertDialog.Builder(this)
+            .setTitle(shortcut.name)
+            .setItems(arrayOf("Edit site", "Remove")) { _, which ->
+                when (which) {
+                    0 -> showShortcutDialog(view, tab, index, shortcut)
+                    1 -> confirmRemoveShortcut(view, tab, shortcut)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun confirmRemoveShortcut(view: View, tab: Tab, shortcut: Shortcut) {
         AlertDialog.Builder(this)
             .setTitle("Remove shortcut?")
@@ -347,35 +360,56 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showAddShortcutDialog(view: View, tab: Tab) {
+    /** Reused for both adding a new tile and editing an existing one. */
+    private fun showShortcutDialog(
+        view: View,
+        tab: Tab,
+        editingIndex: Int,
+        existing: Shortcut?
+    ) {
+        val isEditing = editingIndex >= 0 && existing != null
         val dialogView = LayoutInflater.from(this)
             .inflate(R.layout.dialog_add_shortcut, null)
         val nameInput = dialogView.findViewById<EditText>(R.id.shortcutNameInput)
         val urlInput = dialogView.findViewById<EditText>(R.id.shortcutUrlInput)
+        if (existing != null) {
+            nameInput.setText(existing.name)
+            urlInput.setText(existing.url)
+        }
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Add shortcut")
+            .setTitle(if (isEditing) "Edit shortcut" else "Add shortcut")
             .setView(dialogView)
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Add", null)
+            .setPositiveButton(if (isEditing) "Save" else "Add", null)
             .create()
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val name = nameInput.text.toString().trim()
                 val url = normalizeUrl(urlInput.text.toString())
+                val shortcuts = ShortcutStore.load(this)
+                val duplicate = shortcuts.indices.any { index ->
+                    index != editingIndex && shortcuts[index].url.equals(url, ignoreCase = true)
+                }
                 when {
                     name.isEmpty() -> nameInput.error = "Enter a name"
                     url.isEmpty() -> urlInput.error = "Enter a website"
-                    ShortcutStore.load(this).any { it.url.equals(url, ignoreCase = true) } ->
-                        urlInput.error = "Shortcut already exists"
+                    duplicate -> urlInput.error = "Shortcut already exists"
                     else -> {
-                        val shortcuts = ShortcutStore.load(this)
-                        shortcuts.add(Shortcut(name, url))
+                        if (isEditing && editingIndex in shortcuts.indices) {
+                            shortcuts[editingIndex] = Shortcut(name, url)
+                        } else {
+                            shortcuts.add(Shortcut(name, url))
+                        }
                         ShortcutStore.save(this, shortcuts)
                         dialog.dismiss()
                         refreshShortcutGrid(view, tab)
-                        Toast.makeText(this, "Shortcut added", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this,
+                            if (isEditing) "Shortcut updated" else "Shortcut added",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
