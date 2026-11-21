@@ -12,26 +12,9 @@
         android:padding="@dimen/page_padding">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="New Tab"
-            android:textColor="@color/text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="32dp"
-            android:text="Fast. Familiar. Yours."
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:layout_marginBottom="6dp"
             android:text="Shortcuts"
             android:textColor="@color/text_primary"

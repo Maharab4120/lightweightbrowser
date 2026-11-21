@@ -301,8 +301,21 @@ class MainActivity : Activity() {
         shortcuts.forEachIndexed { index, shortcut ->
             val tile = LayoutInflater.from(this)
                 .inflate(R.layout.shortcut_item, grid, false)
-            tile.findViewById<TextView>(R.id.shortcutBadge).text =
-                shortcut.name.take(1).uppercase(Locale.getDefault())
+            val badge = tile.findViewById<TextView>(R.id.shortcutBadge)
+            val iconRes = shortcutIconRes(shortcut.url)
+            if (iconRes != null) {
+                badge.apply {
+                    text = ""
+                    background = null
+                    setCompoundDrawablesRelativeWithIntrinsicBounds(iconRes, 0, 0, 0)
+                }
+            } else {
+                badge.apply {
+                    text = shortcut.name.take(1).uppercase(Locale.getDefault())
+                    background = resources.getDrawable(R.drawable.shortcut_badge_background, theme)
+                    setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                }
+            }
             tile.findViewById<TextView>(R.id.shortcutLabel).text = shortcut.name
             tile.contentDescription = "Open ${shortcut.name}"
             tile.setOnClickListener { loadUrlInTab(tab, normalizeUrl(shortcut.url)) }
@@ -316,15 +329,25 @@ class MainActivity : Activity() {
         val addTile = LayoutInflater.from(this)
             .inflate(R.layout.shortcut_item, grid, false)
         addTile.findViewById<TextView>(R.id.shortcutBadge).apply {
-            text = "+"
-            textSize = 26f
+            text = ""
             background = resources.getDrawable(R.drawable.shortcut_badge_add_background, theme)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_add, 0, 0, 0)
         }
         addTile.findViewById<TextView>(R.id.shortcutLabel).text = "Add"
         addTile.contentDescription = "Add shortcut"
         addTile.setOnClickListener { showShortcutDialog(view, tab, -1, null) }
         grid.addView(addTile, shortcutTileParams(shortcuts.size, totalTiles))
     }
+
+    /** Local, brand-style glyphs for built-in sites; custom URLs keep a letter badge. */
+    private fun shortcutIconRes(url: String): Int? =
+        when (hostFrom(normalizeUrl(url))?.removePrefix("www.")) {
+            "google.com" -> R.drawable.ic_shortcut_google
+            "youtube.com", "m.youtube.com", "youtu.be" -> R.drawable.ic_shortcut_youtube
+            "github.com" -> R.drawable.ic_shortcut_github
+            "reddit.com", "old.reddit.com" -> R.drawable.ic_shortcut_reddit
+            else -> null
+        }
 
     /** Centers a short last row instead of leaving the Add tile stranded at the left. */
     private fun shortcutTileParams(index: Int, total: Int): GridLayout.LayoutParams {
