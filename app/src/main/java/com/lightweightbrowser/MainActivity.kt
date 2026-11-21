@@ -812,15 +812,18 @@ class MainActivity : Activity() {
 
         tabs.forEach { tab ->
             val item = LayoutInflater.from(this)
-                .inflate(R.layout.tab_item, tabBarContainer, false) as LinearLayout
+                .inflate(R.layout.tab_item, tabBarContainer, false)
+            val row = item.findViewById<View>(R.id.tabRow)
             val titleView = item.findViewById<TextView>(R.id.tabTitle)
             val closeButton = item.findViewById<ImageButton>(R.id.closeTabButton)
+            val indicator = item.findViewById<View>(R.id.tabIndicator)
             val selected = tab.id == currentTabId
 
             titleView.text = tab.title.ifBlank { "New Tab" }
-            item.setBackgroundResource(
+            row.setBackgroundResource(
                 if (selected) R.drawable.tab_background_selected else R.drawable.tab_background
             )
+            indicator.visibility = if (selected) View.VISIBLE else View.GONE
 
             item.setOnClickListener { switchToTab(tab.id) }
             closeButton.setOnClickListener { closeTab(tab.id) }
@@ -918,16 +921,22 @@ class MainActivity : Activity() {
         )
 
         val padding = dp(16)
-        val rowPadding = dp(12)
+        val rowPadding = dp(14)
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
         }
         container.addView(TextView(this).apply {
             text = "Blocking $state  ·  ${blockedCount.get()} blocked"
-            textSize = 13f
-            setTextColor(resources.getColor(R.color.text_secondary, theme))
-            setPadding(rowPadding, 0, rowPadding, padding)
+            textSize = 15f
+            setTextColor(resources.getColor(R.color.text_primary, theme))
+            setPadding(rowPadding, 0, rowPadding, dp(12))
+        })
+        container.addView(View(this).apply {
+            setBackgroundColor(resources.getColor(R.color.divider, theme))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
+            ).apply { bottomMargin = dp(12) }
         })
 
         lateinit var dialog: AlertDialog
@@ -951,13 +960,19 @@ class MainActivity : Activity() {
             })
             row.addView(TextView(this).apply {
                 text = label
-                textSize = 15f
+                textSize = 14f
                 setTextColor(resources.getColor(R.color.text_primary, theme))
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
                 )
+            })
+            row.addView(TextView(this).apply {
+                text = "›"
+                textSize = 20f
+                setTextColor(resources.getColor(R.color.text_secondary, theme))
+                setPadding(dp(8), 0, 0, 0)
             })
             row.setOnClickListener {
                 dialog.dismiss()

@@ -1,32 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="36dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="4dp"
-    android:layout_marginEnd="6dp"
-    android:background="@drawable/tab_background">
+    android:layout_height="@dimen/tab_height"
+    android:layout_marginEnd="@dimen/spacing_sm">
 
-    <TextView
-        android:id="@+id/tabTitle"
+    <LinearLayout
+        android:id="@+id/tabRow"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Tab"
-        android:textSize="12sp"
-        android:maxWidth="120dp"
-        android:ellipsize="end"
-        android:singleLine="true"
-        android:textColor="@color/text_primary" />
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="6dp"
+        android:background="@drawable/tab_background">
 
-    <ImageButton
-        android:id="@+id/closeTabButton"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:layout_marginStart="6dp"
-        android:src="@drawable/ic_close"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:scaleType="centerInside"
-        android:contentDescription="Close tab" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/tabTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tab"
+            android:textSize="12sp"
+            android:maxWidth="130dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/text_primary" />
+
+        <ImageButton
+            android:id="@+id/closeTabButton"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="6dp"
+            android:src="@drawable/ic_close"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            android:contentDescription="Close tab" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/tabIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@color/brand_accent"
+        android:visibility="gone" />
+
+</FrameLayout>

@@ -13,8 +13,9 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@color/brand_primary"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:elevation="4dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
 
         <EditText
             android:id="@+id/urlEditText"
@@ -24,27 +25,26 @@
             android:background="@drawable/url_field_background"
             android:drawableStart="@drawable/ic_search"
             android:drawablePadding="10dp"
-            android:hint="Search or type URL"
+            android:hint="Search or type a URL"
             android:imeOptions="actionGo"
             android:inputType="textUri"
             android:maxLines="1"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
             android:singleLine="true"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/goButton"
-            android:layout_width="44dp"
+            android:layout_width="@dimen/omnibox_height"
             android:layout_height="@dimen/omnibox_height"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="@dimen/spacing_sm"
             android:background="@drawable/toolbar_action_background"
             android:contentDescription="Go"
-            android:drawableStart="@drawable/ic_arrow_forward"
-            android:gravity="center_vertical"
-            android:paddingStart="10dp"
+            android:drawableTop="@drawable/ic_arrow_forward"
+            android:gravity="center"
             android:text=""
             android:textSize="0sp" />
 
@@ -52,8 +52,8 @@
             android:id="@+id/newTabButton"
             android:layout_width="40dp"
             android:layout_height="@dimen/omnibox_height"
-            android:layout_marginStart="4dp"
-            android:background="?android:attr/selectableItemBackground"
+            android:layout_marginStart="@dimen/spacing_xs"
+            android:background="@drawable/toolbar_icon_background"
             android:contentDescription="New tab"
             android:drawableStart="@drawable/ic_add"
             android:gravity="center_vertical"
@@ -65,8 +65,8 @@
             android:id="@+id/shieldButton"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/omnibox_height"
-            android:layout_marginStart="4dp"
-            android:minWidth="76dp"
+            android:layout_marginStart="@dimen/spacing_xs"
+            android:minWidth="80dp"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:background="@drawable/shield_pill_background"
@@ -101,8 +101,8 @@
     <ImageButton
         android:id="@+id/chromePeek"
         android:layout_width="match_parent"
-        android:layout_height="16dp"
-        android:background="@color/brand_primary_dark"
+        android:layout_height="18dp"
+        android:background="@drawable/peek_background"
         android:contentDescription="Show browser controls"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_expand_more"
@@ -121,8 +121,9 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@color/brand_primary"
-        android:paddingStart="6dp"
-        android:paddingEnd="6dp">
+        android:elevation="4dp"
+        android:paddingStart="@dimen/spacing_sm"
+        android:paddingEnd="@dimen/spacing_sm">
 
         <TextView
             android:id="@+id/backButton"
@@ -131,7 +132,7 @@
             android:layout_weight="1"
             android:background="?android:attr/selectableItemBackground"
             android:contentDescription="Back"
-            android:drawablePadding="2dp"
+            android:drawablePadding="4dp"
             android:drawableTop="@drawable/ic_back"
             android:gravity="center"
             android:text="Back"
@@ -145,7 +146,7 @@
             android:layout_weight="1"
             android:background="?android:attr/selectableItemBackground"
             android:contentDescription="Forward"
-            android:drawablePadding="2dp"
+            android:drawablePadding="4dp"
             android:drawableTop="@drawable/ic_forward"
             android:gravity="center"
             android:text="Forward"
@@ -159,7 +160,7 @@
             android:layout_weight="1"
             android:background="?android:attr/selectableItemBackground"
             android:contentDescription="Reload"
-            android:drawablePadding="2dp"
+            android:drawablePadding="4dp"
             android:drawableTop="@drawable/ic_reload"
             android:gravity="center"
             android:text="Reload"
@@ -173,7 +174,7 @@
             android:layout_weight="1"
             android:background="?android:attr/selectableItemBackground"
             android:contentDescription="New tab page"
-            android:drawablePadding="2dp"
+            android:drawablePadding="4dp"
             android:drawableTop="@drawable/ic_home"
             android:gravity="center"
             android:text="Home"

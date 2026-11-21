@@ -23,4 +23,7 @@
 
     <color name="dialog_surface">#FFFFFFFF</color>
     <color name="dialog_row">#FFF4F5F7</color>
+
+    <color name="toolbar_icon_bg">#22FFFFFF</color>
+    <color name="accent_soft">#1AFF5A36</color>
 </resources>

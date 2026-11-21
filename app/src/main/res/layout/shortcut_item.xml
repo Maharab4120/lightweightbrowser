@@ -7,12 +7,13 @@
     android:clickable="true"
     android:focusable="true"
     android:background="@drawable/shortcut_card_background"
-    android:padding="12dp">
+    android:elevation="1dp"
+    android:padding="14dp">
 
     <TextView
         android:id="@+id/shortcutBadge"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="@dimen/shortcut_icon"
+        android:layout_height="@dimen/shortcut_icon"
         android:background="@drawable/shortcut_badge_background"
         android:gravity="center"
         android:textColor="@android:color/white"
