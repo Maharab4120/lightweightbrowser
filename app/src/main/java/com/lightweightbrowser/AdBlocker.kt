@@ -56,7 +56,7 @@ object AdBlocker {
                 var referrer = document.createElement('meta');
                 referrer.id = '__lw_referrer';
                 referrer.name = 'referrer';
-                referrer.content = 'no-referrer';
+                referrer.content = 'same-origin';
                 (document.head || document.documentElement).appendChild(referrer);
             }
         } catch (e) {}
@@ -157,7 +157,11 @@ object AdBlocker {
 
     fun isEnabled(): Boolean = core.isEnabled()
 
-    /** Injected at page start so scripts see privacy signals before they run. */
+    /**
+     * Injected at page start so scripts see privacy signals before they run.
+     * The referrer policy is same-origin: cross-site referrers stay private,
+     * while same-origin login forms keep the Origin/Referer headers sites need.
+     */
     fun privacyJs(): String = """
         (function () {
             if (window.__lwPrivacyInjected) return;
