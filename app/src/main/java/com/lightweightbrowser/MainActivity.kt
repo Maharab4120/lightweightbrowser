@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicInteger
 class MainActivity : Activity() {
 
     private lateinit var urlEditText: EditText
-    private lateinit var goButton: TextView
     private lateinit var newTabButton: TextView
     private lateinit var shieldButton: TextView
     private lateinit var tabBarContainer: LinearLayout
@@ -180,7 +179,6 @@ class MainActivity : Activity() {
 
     private fun bindViews() {
         urlEditText = findViewById(R.id.urlEditText)
-        goButton = findViewById(R.id.goButton)
         newTabButton = findViewById(R.id.newTabButton)
         shieldButton = findViewById(R.id.shieldButton)
         tabBarContainer = findViewById(R.id.tabBarContainer)
@@ -196,7 +194,21 @@ class MainActivity : Activity() {
     }
 
     private fun setupListeners() {
-        goButton.setOnClickListener { loadUrlInCurrentTab(urlEditText.text.toString()) }
+        // The submit arrow is drawn inside the omnibox, so tapping it must feel
+        // like part of the field rather than a separate toolbar action.
+        urlEditText.setOnTouchListener { view, event ->
+            val endDrawable = urlEditText.compoundDrawablesRelative[2]
+            val hitEnd = endDrawable != null &&
+                event.actionMasked == MotionEvent.ACTION_UP &&
+                event.x >= urlEditText.width - urlEditText.paddingEnd - endDrawable.bounds.width()
+            if (hitEnd) {
+                loadUrlInCurrentTab(urlEditText.text.toString())
+                view.performClick()
+                true
+            } else {
+                false
+            }
+        }
 
         urlEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) urlEditText.selectAll()
@@ -275,18 +287,6 @@ class MainActivity : Activity() {
     private fun createSpeedDialView(tab: Tab): View {
         val view = LayoutInflater.from(this)
             .inflate(R.layout.speed_dial_view, tabContentContainer, false)
-
-        // The large field is a launcher for the one real omnibox, not a second
-        // text input with its own separate state.
-        view.findViewById<View>(R.id.startSearchBox).setOnClickListener {
-            setChromeVisible(true)
-            urlEditText.setText("")
-            urlEditText.requestFocus()
-            urlEditText.setSelection(0)
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showSoftInput(urlEditText, InputMethodManager.SHOW_IMPLICIT)
-        }
-
         refreshShortcutGrid(view, tab)
         return view
     }
@@ -295,42 +295,56 @@ class MainActivity : Activity() {
         val grid = view.findViewById<GridLayout>(R.id.shortcutGrid) ?: return
         grid.removeAllViews()
 
-        ShortcutStore.load(this).forEachIndexed { index, shortcut ->
+        val shortcuts = ShortcutStore.load(this)
+        val totalTiles = shortcuts.size + 1 // shortcuts plus the Add tile
+
+        shortcuts.forEachIndexed { index, shortcut ->
             val tile = LayoutInflater.from(this)
                 .inflate(R.layout.shortcut_item, grid, false)
             tile.findViewById<TextView>(R.id.shortcutBadge).text =
                 shortcut.name.take(1).uppercase(Locale.getDefault())
             tile.findViewById<TextView>(R.id.shortcutLabel).text = shortcut.name
+            tile.contentDescription = "Open ${shortcut.name}"
             tile.setOnClickListener { loadUrlInTab(tab, normalizeUrl(shortcut.url)) }
             tile.setOnLongClickListener {
                 showShortcutOptions(view, tab, shortcut, index)
                 true
             }
-            grid.addView(tile, shortcutTileParams(index))
+            grid.addView(tile, shortcutTileParams(index, totalTiles))
         }
 
         val addTile = LayoutInflater.from(this)
             .inflate(R.layout.shortcut_item, grid, false)
         addTile.findViewById<TextView>(R.id.shortcutBadge).apply {
             text = "+"
-            textSize = 22f
+            textSize = 26f
             background = resources.getDrawable(R.drawable.shortcut_badge_add_background, theme)
         }
         addTile.findViewById<TextView>(R.id.shortcutLabel).text = "Add"
+        addTile.contentDescription = "Add shortcut"
         addTile.setOnClickListener { showShortcutDialog(view, tab, -1, null) }
-        grid.addView(addTile, shortcutTileParams(ShortcutStore.load(this).size))
+        grid.addView(addTile, shortcutTileParams(shortcuts.size, totalTiles))
     }
 
-    private fun shortcutTileParams(index: Int): GridLayout.LayoutParams {
-        val column = index % SHORTCUT_COLUMNS
-        val row = index / SHORTCUT_COLUMNS
+    /** Centers a short last row instead of leaving the Add tile stranded at the left. */
+    private fun shortcutTileParams(index: Int, total: Int): GridLayout.LayoutParams {
+        val columns = SHORTCUT_COLUMNS
+        val row = index / columns
+        val remainder = total % columns
+        val onLastRow = row == total / columns && remainder != 0
+        val columnSpec = when {
+            onLastRow && remainder == 1 -> GridLayout.spec(1, 2, 1f)
+            onLastRow && remainder in 2..3 ->
+                GridLayout.spec(1 + (index % columns), 1, 1f)
+            else -> GridLayout.spec(index % columns, 1, 1f)
+        }
         return GridLayout.LayoutParams(
             GridLayout.spec(row, GridLayout.FILL, 0f),
-            GridLayout.spec(column, 1, 1f)
+            columnSpec
         ).apply {
             width = 0
             height = ViewGroup.LayoutParams.WRAP_CONTENT
-            setMargins(dp(4), dp(4), dp(4), dp(4))
+            setMargins(dp(6), dp(6), dp(6), dp(6))
         }
     }
 
@@ -841,7 +855,7 @@ class MainActivity : Activity() {
 
     private fun setButtonEnabled(button: TextView, enabled: Boolean) {
         button.isEnabled = enabled
-        button.alpha = if (enabled) 1f else 0.35f
+        button.alpha = if (enabled) 1f else 0.28f
     }
 
     /**
@@ -1154,12 +1168,14 @@ class MainActivity : Activity() {
 
     private fun updateBlockerUi() {
         val enabled = BlockerEngineManager.isEnabled()
-        shieldButton.text = if (enabled) {
-            "SHIELD ${blockedCount.get()}"
+        val count = blockedCount.get()
+        shieldButton.text = if (enabled) "Shield On" else "Shield Off"
+        shieldButton.contentDescription = if (enabled) {
+            "Ad blocking on, $count blocked. Tap for settings."
         } else {
-            "OFF ${blockedCount.get()}"
+            "Ad blocking off. Tap for settings."
         }
-        shieldButton.alpha = if (enabled) 1f else 0.5f
+        shieldButton.alpha = if (enabled) 1f else 0.6f
     }
 
     private fun normalizeUrl(input: String): String {

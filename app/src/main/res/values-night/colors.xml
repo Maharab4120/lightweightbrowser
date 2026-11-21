@@ -20,6 +20,7 @@
 
     <color name="shortcut_card">#FF222631</color>
     <color name="shortcut_card_border">#FF353A46</color>
+    <color name="chrome_surface_pressed">#FF2C313D</color>
 
     <color name="dialog_surface">#FF1B1E26</color>
     <color name="dialog_row">#FF242833</color>

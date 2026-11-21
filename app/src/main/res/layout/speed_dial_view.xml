@@ -11,52 +11,28 @@
         android:gravity="center_horizontal"
         android:padding="@dimen/page_padding">
 
-        <View
-            android:layout_width="48dp"
-            android:layout_height="4dp"
-            android:background="@color/brand_accent" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="LightweightBrowser"
+            android:layout_marginTop="16dp"
+            android:text="New Tab"
             android:textColor="@color/text_primary"
-            android:textSize="26sp"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="28dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="32dp"
             android:text="Fast. Familiar. Yours."
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
 
         <TextView
-            android:id="@+id/startSearchBox"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginBottom="28dp"
-            android:background="@drawable/url_field_background"
-            android:clickable="true"
-            android:contentDescription="Search or type a URL"
-            android:drawableStart="@drawable/ic_search"
-            android:drawableEnd="@drawable/ic_arrow_forward"
-            android:drawablePadding="10dp"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
-            android:text="Search or type a URL"
-            android:textColor="@color/text_secondary"
-            android:textSize="15sp" />
-
-        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="6dp"
             android:text="Shortcuts"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
@@ -65,10 +41,10 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="16dp"
             android:text="Tap to open · Long press for options"
             android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
+            android:textSize="13sp" />
 
         <GridLayout
             android:id="@+id/shortcutGrid"

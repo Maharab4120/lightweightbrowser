@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="toolbar_height">56dp</dimen>
-    <dimen name="omnibox_height">42dp</dimen>
+    <dimen name="toolbar_height">60dp</dimen>
+    <dimen name="omnibox_height">44dp</dimen>
     <dimen name="tab_bar_height">48dp</dimen>
-    <dimen name="tab_height">40dp</dimen>
-    <dimen name="bottom_bar_height">60dp</dimen>
+    <dimen name="tab_height">44dp</dimen>
+    <dimen name="bottom_bar_height">64dp</dimen>
 
-    <dimen name="corner_radius">14dp</dimen>
+    <dimen name="corner_radius">18dp</dimen>
     <dimen name="card_radius">18dp</dimen>
     <dimen name="page_padding">20dp</dimen>
 
-    <dimen name="shortcut_icon">46dp</dimen>
+    <dimen name="shortcut_icon">48dp</dimen>
     <dimen name="nav_icon">22dp</dimen>
 
     <dimen name="spacing_xs">4dp</dimen>
