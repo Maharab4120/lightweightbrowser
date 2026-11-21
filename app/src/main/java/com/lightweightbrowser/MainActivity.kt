@@ -36,6 +36,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.GridLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -44,6 +45,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import java.io.ByteArrayInputStream
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -274,18 +276,111 @@ class MainActivity : Activity() {
         val view = LayoutInflater.from(this)
             .inflate(R.layout.speed_dial_view, tabContentContainer, false)
 
-        listOf(
-            "https://www.google.com",
-            "https://www.youtube.com",
-            "https://github.com",
-            "https://www.reddit.com"
-        ).forEach { shortcut ->
-            (view.findViewWithTag(shortcut) as? View)?.setOnClickListener {
-                loadUrlInTab(tab, shortcut)
-            }
+        // The large field is a launcher for the one real omnibox, not a second
+        // text input with its own separate state.
+        view.findViewById<View>(R.id.startSearchBox).setOnClickListener {
+            setChromeVisible(true)
+            urlEditText.setText("")
+            urlEditText.requestFocus()
+            urlEditText.setSelection(0)
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.showSoftInput(urlEditText, InputMethodManager.SHOW_IMPLICIT)
         }
 
+        refreshShortcutGrid(view, tab)
         return view
+    }
+
+    private fun refreshShortcutGrid(view: View, tab: Tab) {
+        val grid = view.findViewById<GridLayout>(R.id.shortcutGrid) ?: return
+        grid.removeAllViews()
+
+        ShortcutStore.load(this).forEachIndexed { index, shortcut ->
+            val tile = LayoutInflater.from(this)
+                .inflate(R.layout.shortcut_item, grid, false)
+            tile.findViewById<TextView>(R.id.shortcutBadge).text =
+                shortcut.name.take(1).uppercase(Locale.getDefault())
+            tile.findViewById<TextView>(R.id.shortcutLabel).text = shortcut.name
+            tile.setOnClickListener { loadUrlInTab(tab, normalizeUrl(shortcut.url)) }
+            tile.setOnLongClickListener {
+                confirmRemoveShortcut(view, tab, shortcut)
+                true
+            }
+            grid.addView(tile, shortcutTileParams(index))
+        }
+
+        val addTile = LayoutInflater.from(this)
+            .inflate(R.layout.shortcut_item, grid, false)
+        addTile.findViewById<TextView>(R.id.shortcutBadge).apply {
+            text = "+"
+            textSize = 22f
+            background = resources.getDrawable(R.drawable.shortcut_badge_add_background, theme)
+        }
+        addTile.findViewById<TextView>(R.id.shortcutLabel).text = "Add"
+        addTile.setOnClickListener { showAddShortcutDialog(view, tab) }
+        grid.addView(addTile, shortcutTileParams(ShortcutStore.load(this).size))
+    }
+
+    private fun shortcutTileParams(index: Int): GridLayout.LayoutParams {
+        val column = index % SHORTCUT_COLUMNS
+        val row = index / SHORTCUT_COLUMNS
+        return GridLayout.LayoutParams(
+            GridLayout.spec(row, GridLayout.FILL, 0f),
+            GridLayout.spec(column, 1, 1f)
+        ).apply {
+            width = 0
+            height = ViewGroup.LayoutParams.WRAP_CONTENT
+            setMargins(dp(4), dp(4), dp(4), dp(4))
+        }
+    }
+
+    private fun confirmRemoveShortcut(view: View, tab: Tab, shortcut: Shortcut) {
+        AlertDialog.Builder(this)
+            .setTitle("Remove shortcut?")
+            .setMessage("Remove ${shortcut.name} from the home page?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Remove") { _, _ ->
+                ShortcutStore.save(this, ShortcutStore.load(this).filterNot { it.url == shortcut.url })
+                refreshShortcutGrid(view, tab)
+                Toast.makeText(this, "Shortcut removed", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun showAddShortcutDialog(view: View, tab: Tab) {
+        val dialogView = LayoutInflater.from(this)
+            .inflate(R.layout.dialog_add_shortcut, null)
+        val nameInput = dialogView.findViewById<EditText>(R.id.shortcutNameInput)
+        val urlInput = dialogView.findViewById<EditText>(R.id.shortcutUrlInput)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Add shortcut")
+            .setView(dialogView)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Add", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = nameInput.text.toString().trim()
+                val url = normalizeUrl(urlInput.text.toString())
+                when {
+                    name.isEmpty() -> nameInput.error = "Enter a name"
+                    url.isEmpty() -> urlInput.error = "Enter a website"
+                    ShortcutStore.load(this).any { it.url.equals(url, ignoreCase = true) } ->
+                        urlInput.error = "Shortcut already exists"
+                    else -> {
+                        val shortcuts = ShortcutStore.load(this)
+                        shortcuts.add(Shortcut(name, url))
+                        ShortcutStore.save(this, shortcuts)
+                        dialog.dismiss()
+                        refreshShortcutGrid(view, tab)
+                        Toast.makeText(this, "Shortcut added", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun showSpeedDial(tab: Tab) {
@@ -1164,6 +1259,7 @@ class MainActivity : Activity() {
     }
 
     companion object {
+        private const val SHORTCUT_COLUMNS = 4
         private const val PREFS_NAME = "lightweight_browser_prefs"
         private const val KEY_BLOCKER_ENABLED = "blocker_enabled"
         private const val KEY_USE_RUST_ENGINE = "use_rust_engine"
