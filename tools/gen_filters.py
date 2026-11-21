@@ -8,7 +8,6 @@ filter files at runtime.
 """
 
 import re
-import shutil
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -34,22 +33,8 @@ SOURCES = [
     ("yt-shorts.txt", BRAVE + "yt-shorts.txt", 6),
 ]
 
-# Reuse the original upstream snapshots from earlier work when available.
-LOCAL_SNAPSHOTS = {
-    "easylist.txt": Path("/home/maharab/.local/share/opencode/tool-output/tool_1f8179158001kyVXQPEFZxoL6I"),
-    "easyprivacy.txt": Path("/home/maharab/.local/share/opencode/tool-output/tool_1f81790ea0013XVS0BYjzH13cY"),
-    "ubo-filters.txt": Path("/home/maharab/.local/share/opencode/tool-output/tool_1f817904a001fH9doTgNk2ueyb"),
-    "brave-specific.txt": Path("/tmp/opencode/brave_lists/brave-specific.txt"),
-    "brave-android-specific.txt": Path("/tmp/opencode/brave_lists/brave-android-specific.txt"),
-    "brave-social.txt": Path("/tmp/opencode/brave_lists/brave-social.txt"),
-    "brave-cookie-specific.txt": Path("/tmp/opencode/brave_lists/brave-cookie-specific.txt"),
-    "brave-firstparty.txt": Path("/tmp/opencode/brave_lists/brave-firstparty.txt"),
-    "filters-mirror.txt": Path("/tmp/opencode/brave_lists/filters-mirror.txt"),
-    "yt-distracting.txt": Path("/tmp/opencode/brave_lists/yt-distracting.txt"),
-    "yt-recommended.txt": Path("/tmp/opencode/brave_lists/yt-recommended.txt"),
-    "yt-shorts.txt": Path("/tmp/opencode/brave_lists/yt-shorts.txt"),
-}
-
+# Reuse earlier snapshots from the local cache when present so repeated runs
+# do not re-download. The cache lives under tools/.filter-cache (see CACHE).
 HOST_RE = re.compile(r"^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$")
 KEYWORDS = (
     "ad", "ads", "advert", "banner", "track", "analytic", "pixel", "beacon",
@@ -99,9 +84,6 @@ cosmetic = []
 
 def read_source(name, url):
     cached = CACHE / name
-    local = LOCAL_SNAPSHOTS.get(name)
-    if local and local.is_file() and (not cached.exists() or local.stat().st_size > cached.stat().st_size):
-        shutil.copyfile(local, cached)
     if not cached.is_file():
         request = Request(url, headers={"User-Agent": "LightweightBrowser-filter-generator/1.0"})
         cached.write_bytes(urlopen(request, timeout=90).read())

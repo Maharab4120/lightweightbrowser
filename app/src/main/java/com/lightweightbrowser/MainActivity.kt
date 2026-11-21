@@ -23,6 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.window.OnBackInvokedDispatcher
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -87,10 +88,11 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         bindViews()
+        registerBackHandler()
 
         BlockerEngineManager.init(
             applicationContext,
-            prefs.getBoolean(KEY_USE_RUST_ENGINE, false)
+            prefs.getBoolean(KEY_USE_RUST_ENGINE, DEFAULT_USE_RUST_ENGINE)
         )
         BlockerEngineManager.setEnabled(prefs.getBoolean(KEY_BLOCKER_ENABLED, true))
         blockedCount.set(prefs.getInt(KEY_BLOCKED_COUNT, 0))
@@ -511,7 +513,7 @@ class MainActivity : Activity() {
                     val errorCode = error?.errorCode ?: 0
                     tab.lastFailedHttps = failedUrl
 
-                    if (errorCode == ERROR_SSL_HANDSHAKE) {
+                    if (errorCode == WebViewClient.ERROR_FAILED_SSL_HANDSHAKE) {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("Secure connection failed")
                             .setMessage(
@@ -904,7 +906,7 @@ class MainActivity : Activity() {
     }
 
     private fun toggleFilterEngine() {
-        val useRust = !prefs.getBoolean(KEY_USE_RUST_ENGINE, false)
+        val useRust = !prefs.getBoolean(KEY_USE_RUST_ENGINE, DEFAULT_USE_RUST_ENGINE)
         prefs.edit().putBoolean(KEY_USE_RUST_ENGINE, useRust).apply()
 
         if (!useRust) {
@@ -1075,27 +1077,51 @@ class MainActivity : Activity() {
 
     private val MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT
 
-    @Suppress("DEPRECATION")
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
+    private fun registerBackHandler() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerOnBackInvoked()
+        }
+    }
+
+    @android.annotation.TargetApi(Build.VERSION_CODES.TIRAMISU)
+    private fun registerOnBackInvoked() {
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            OnBackInvokedDispatcher.PRIORITY_DEFAULT
+        ) {
+            if (!handleBack()) finish()
+        }
+    }
+
+    /**
+     * Consumes the back gesture when possible: reveal hidden chrome, step back
+     * in history, or fall back to the speed dial. Returns false when the
+     * activity itself should close.
+     */
+    private fun handleBack(): Boolean {
         if (!chromeVisible) {
             setChromeVisible(true)
-            return
+            return true
         }
 
         val webView = currentTab()?.webView
         if (webView?.canGoBack() == true) {
             webView.goBack()
-            return
+            return true
         }
 
         val tab = currentTab()
         if (tab != null && tab.url.isNotEmpty()) {
             showSpeedDial(tab)
-            return
+            return true
         }
+        return false
+    }
 
-        super.onBackPressed()
+    @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Fallback when predictive back is not opted in for this activity.
+        if (!handleBack()) super.onBackPressed()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1143,7 +1169,9 @@ class MainActivity : Activity() {
         private const val KEY_USE_RUST_ENGINE = "use_rust_engine"
         private const val KEY_BLOCKED_COUNT = "blocked_count"
         private const val KEY_CLEAR_ON_EXIT = "clear_on_exit"
-        private const val ERROR_SSL_HANDSHAKE = -11
+        // Fresh installs stay on the verified Kotlin engine; Rust remains opt-in
+        // through Privacy shield -> Engine (tap to switch).
+        private const val DEFAULT_USE_RUST_ENGINE = false
         private const val KEY_TAB_IDS = "tab_ids"
         private const val KEY_TAB_URLS = "tab_urls"
         private const val KEY_TAB_TITLES = "tab_titles"

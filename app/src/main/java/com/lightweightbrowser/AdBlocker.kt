@@ -87,10 +87,11 @@ object AdBlocker {
         )
         core.init(networkAssets.associateWith { loadLines(context, it) })
 
-        loadLines(context, "cosmetic_rules.txt") { line ->
+        loadLines(context, "cosmetic_rules.txt", lowercase = false) { line ->
             val parts = line.split('\t', limit = 2)
             if (parts.size != 2) return@loadLines
-            val prefix = parts[0].trim()
+            // Domains are matched against lowercased hosts; selectors keep case.
+            val prefix = parts[0].trim().lowercase(Locale.ROOT)
             val selector = parts[1].trim()
             if (selector.isEmpty()) return@loadLines
 
@@ -125,12 +126,24 @@ object AdBlocker {
         return result
     }
 
-    private fun loadLines(context: Context, assetName: String, consume: (String) -> Unit) {
+    /**
+     * [lowercase] stays true for host/pattern assets (matching runs on
+     * lowercased hosts), but must be false for cosmetic rules: CSS id/class
+     * selectors are case-sensitive and lowercasing them silently breaks
+     * matching against real DOM elements.
+     */
+    private fun loadLines(
+        context: Context,
+        assetName: String,
+        lowercase: Boolean = true,
+        consume: (String) -> Unit
+    ) {
         try {
             context.assets.open(assetName).bufferedReader().useLines { lines ->
                 lines.forEach { raw ->
-                    val line = raw.trim().lowercase(Locale.ROOT)
-                    if (line.isNotEmpty() && !line.startsWith("#")) consume(line)
+                    val trimmed = raw.trim()
+                    if (trimmed.isEmpty() || trimmed.startsWith("#")) return@forEach
+                    consume(if (lowercase) trimmed.lowercase(Locale.ROOT) else trimmed)
                 }
             }
         } catch (e: Exception) {
@@ -247,25 +260,27 @@ object AdBlocker {
 
     /** Cosmetic CSS injected after each page load. */
     fun cosmeticJsFor(host: String): String {
+        // Rule domains are lowercased at load time; CSS selectors are not.
+        val normalizedHost = host.lowercase(Locale.ROOT)
         val selectors = LinkedHashSet<String>()
         selectors.addAll(extraCosmeticSelectors)
         selectors.addAll(genericSelectors)
         for ((domain, rules) in domainSelectors) {
-            if (hostMatchesDomain(host, domain)) {
+            if (hostMatchesDomain(normalizedHost, domain)) {
                 selectors.addAll(rules)
             }
         }
         for ((domain, rules) in siteCosmeticSelectors) {
             val matches = when {
                 domain == "*" -> true
-                domain.endsWith(".*") -> host.startsWith(domain.removeSuffix(".*") + ".")
-                else -> hostMatchesDomain(host, domain)
+                domain.endsWith(".*") -> normalizedHost.startsWith(domain.removeSuffix(".*") + ".")
+                else -> hostMatchesDomain(normalizedHost, domain)
             }
             if (matches) selectors.addAll(rules)
         }
         selectors.removeAll(genericExceptions)
         for ((domain, rules) in domainCosmeticExceptions) {
-            if (hostMatchesDomain(host, domain)) {
+            if (hostMatchesDomain(normalizedHost, domain)) {
                 selectors.removeAll(rules)
             }
         }

@@ -72,11 +72,13 @@ const REQUIRED_EXCEPTIONS: &str = "
 @@||cdn-media.brightline.tv^
 ";
 
-fn build_engine(filters: &str) -> Engine {
+/// Consumes the caller's filter text so the multi-megabyte list is not copied
+/// a second time before being parsed.
+fn build_engine(filters: String) -> Engine {
     let mut filter_set = FilterSet::new(false);
     filter_set.add_filter_list(REQUIRED_BLOCKS.to_string(), ParseOptions::default());
     filter_set.add_filter_list(REQUIRED_EXCEPTIONS.to_string(), ParseOptions::default());
-    filter_set.add_filter_list(filters.to_string(), ParseOptions::default());
+    filter_set.add_filter_list(filters, ParseOptions::default());
     Engine::new_with_filter_set(filter_set)
 }
 
@@ -106,10 +108,11 @@ pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeI
         return JNI_FALSE;
     }
 
-    let engine = build_engine(&filters);
+    let filter_bytes = filters.len();
+    let engine = build_engine(filters);
     match ENGINE.write() {
         Ok(mut guard) => {
-            FILTER_BYTES.store(filters.len(), Ordering::Relaxed);
+            FILTER_BYTES.store(filter_bytes, Ordering::Relaxed);
             *guard = Some(engine);
             JNI_TRUE
         }
@@ -197,7 +200,7 @@ mod tests {
     fn builds_with_bundled_filters() {
         let filters = include_str!("../../app/src/main/assets/adblock_filters.txt");
         let started = Instant::now();
-        let engine = build_engine(filters);
+        let engine = build_engine(filters.to_string());
         let elapsed = started.elapsed();
         eprintln!(
             "adblock-rust engine built from {} bytes in {} ms",
@@ -211,7 +214,7 @@ mod tests {
     #[test]
     fn network_decisions_match_shared_fixtures() {
         let filters = include_str!("../../app/src/main/assets/adblock_filters.txt");
-        let engine = build_engine(filters);
+        let engine = build_engine(filters.to_string());
         let mut mismatches = Vec::new();
 
         for case in cases() {
