@@ -2,6 +2,7 @@ package com.example.lightweightbrowser
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -77,5 +78,45 @@ class WebViewCoverageTest {
         assertEquals("{}", String(xhr.body, Charsets.UTF_8))
 
         assertTrue(BlockedResponses.spec("other").statusCode == 200)
+    }
+
+    @Test
+    fun navigationPolicyOnlyInterceptsWhenNecessary() {
+        val plainHttps = NavigationDecision.of("https://example.com/page", false)
+        assertFalse(plainHttps.intercept)
+        assertFalse(plainHttps.upgradeToHttps)
+        assertFalse(plainHttps.openExternally)
+
+        val upgrade = NavigationDecision.of("http://example.com/page", false)
+        assertTrue(upgrade.intercept)
+        assertTrue(upgrade.upgradeToHttps)
+
+        val blocked = NavigationDecision.of("https://ads.example.net/banner", true)
+        assertTrue(blocked.intercept)
+        assertFalse(blocked.upgradeToHttps)
+
+        val external = NavigationDecision.of("mailto:hello@example.com", false)
+        assertTrue(external.intercept)
+        assertTrue(external.openExternally)
+
+        assertFalse(NavigationDecision.of(null, false).intercept)
+    }
+
+    @Test
+    fun cosmeticFrameCleanupUsesExactHostAndPathLabels() {
+        val js = AdBlocker.cosmeticJsFor("example.com")
+        assertTrue(js.contains("adHostLabels"))
+        assertTrue(js.contains("adPathSegments"))
+        assertFalse(js.contains("indexOf(adWords"))
+        assertFalse(js.contains("iframe[src*="))
+    }
+
+    @Test
+    fun privacyScriptCanToggleWebRtcBlocking() {
+        val blocked = AdBlocker.privacyJs(true)
+        val allowed = AdBlocker.privacyJs(false)
+        assertTrue(blocked.contains("if (true)"))
+        assertTrue(allowed.contains("if (false)"))
+        assertTrue(blocked.contains("__lwRtcOriginal"))
     }
 }

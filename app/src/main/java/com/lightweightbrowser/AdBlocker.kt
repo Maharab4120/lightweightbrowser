@@ -33,10 +33,7 @@ object AdBlocker {
         "[id*=\"advert\"]", "[class*=\"advert\"]",
         "[id*=\"banner-ad\"]", "[class*=\"banner-ad\"]",
         "[id*=\"popup-ad\"]", "[class*=\"popup-ad\"]",
-        "[data-ad-slot]", "[data-ad-client]", "[data-ad-format]",
-        "iframe[src*=\"ads\"]", "iframe[src*=\"advert\"]",
-        "iframe[src*=\"banner\"]", "iframe[src*=\"popup\"]",
-        "iframe[src*=\"pixel\"]", "iframe[src*=\"track\"]"
+        "[data-ad-slot]", "[data-ad-client]", "[data-ad-format]"
     )
 
     // Known non-content popups/overlays on ad-heavy streaming sites.
@@ -50,7 +47,7 @@ object AdBlocker {
         )
     )
 
-    private val privacyJs = """
+    private fun privacyRulesJs(blockWebRtc: Boolean): String = """
         try {
             if (!document.getElementById('__lw_referrer')) {
                 var referrer = document.createElement('meta');
@@ -73,9 +70,22 @@ object AdBlocker {
             });
         } catch (e) {}
         try {
-            Object.defineProperty(window, 'RTCPeerConnection', {
-                configurable: true, value: undefined
-            });
+            if (!('__lwRtcOriginal' in window)) {
+                Object.defineProperty(window, '__lwRtcOriginal', {
+                    configurable: true, value: window.RTCPeerConnection
+                });
+            }
+            if (${blockWebRtc}) {
+                Object.defineProperty(window, 'RTCPeerConnection', {
+                    configurable: true, value: undefined
+                });
+            } else if (window.__lwRtcOriginal &&
+                window.RTCPeerConnection !== window.__lwRtcOriginal) {
+                Object.defineProperty(window, 'RTCPeerConnection', {
+                    configurable: true, writable: true,
+                    value: window.__lwRtcOriginal
+                });
+            }
         } catch (e) {}
     """.trimIndent()
 
@@ -162,11 +172,11 @@ object AdBlocker {
      * The referrer policy is same-origin: cross-site referrers stay private,
      * while same-origin login forms keep the Origin/Referer headers sites need.
      */
-    fun privacyJs(): String = """
+    fun privacyJs(blockWebRtc: Boolean): String = """
         (function () {
             if (window.__lwPrivacyInjected) return;
             window.__lwPrivacyInjected = true;
-            $privacyJs
+            ${privacyRulesJs(blockWebRtc)}
         })();
     """.trimIndent()
 
@@ -313,13 +323,31 @@ object AdBlocker {
                     (document.head || document.documentElement).appendChild(style);
                 }
 
-                var adWords = ['ads', 'advert', 'banner', 'popup', 'popunder', 'sponsor', 'pixel', 'track'];
-                var hasAdWord = function (value) {
-                    var lower = String(value || '').toLowerCase();
-                    for (var k = 0; k < adWords.length; k++) {
-                        if (lower.indexOf(adWords[k]) >= 0) return true;
+                // Exact host labels and path segments only. Substring matching would
+                // remove legitimate URLs such as /uploads, /downloads or /threads.
+                var adHostLabels = ['ads','ad','advert','advertising','banner','banners',
+                    'popunder','popup','pixel','pixels','track','tracker','tracking'];
+                var adPathSegments = ['ads','ad','advert','advertising','banner','banners',
+                    'popunder','popup','pixel','pixels','track','tracking'];
+                var hasLabel = function (parts, labels) {
+                    for (var i = 0; i < parts.length; i++) {
+                        if (!parts[i]) continue;
+                        for (var k = 0; k < labels.length; k++) {
+                            if (parts[i] === labels[k]) return true;
+                        }
                     }
                     return false;
+                };
+                var isAdFrameUrl = function (src) {
+                    try {
+                        var u = new URL(src, window.location.href);
+                        var hostLabels = u.hostname.toLowerCase().split('.');
+                        var pathSegments = u.pathname.toLowerCase().split('/');
+                        return hasLabel(hostLabels, adHostLabels) ||
+                            hasLabel(pathSegments, adPathSegments);
+                    } catch (e) {
+                        return false;
+                    }
                 };
 
                 var cleanupFrames = function () {
@@ -328,13 +356,9 @@ object AdBlocker {
                         var frame = frames[i];
                         var src = frame.src || frame.getAttribute('src') ||
                             frame.getAttribute('data-src') || '';
-                        var bad = hasAdWord(src);
-                        if (!bad) {
-                            try {
-                                bad = hasAdWord(new URL(src, window.location.href).hostname);
-                            } catch (e) {}
+                        if (isAdFrameUrl(src) && frame.parentNode) {
+                            frame.parentNode.removeChild(frame);
                         }
-                        if (bad && frame.parentNode) frame.parentNode.removeChild(frame);
                     }
                 };
                 cleanupFrames();
@@ -370,8 +394,8 @@ object AdBlocker {
     /**
      * Site-specific helpers injected alongside the cosmetic CSS.
      * watchseries.moe shows a first-party ad interstitial that must be clicked
-     * to start the video. We click it automatically (the popup it opens is
-     * swallowed by onCreateWindow) so the user never sees the ad.
+     * to start the video. This helper clicks it automatically; any popup it opens
+     * is opened as a normal tab and can be closed by the user.
      */
     private fun siteScriptFor(host: String): String {
         if (host != "watchseries.moe" && !host.endsWith(".watchseries.moe")) return ""

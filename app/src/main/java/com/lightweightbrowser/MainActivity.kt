@@ -506,7 +506,8 @@ class MainActivity : Activity() {
                 allowContentAccess = false
                 setAllowFileAccessFromFileURLs(false)
                 setAllowUniversalAccessFromFileURLs(false)
-                javaScriptCanOpenWindowsAutomatically = false
+                javaScriptCanOpenWindowsAutomatically = true
+                setSupportMultipleWindows(true)
                 setGeolocationEnabled(false)
                 setSavePassword(false)
                 setSaveFormData(false)
@@ -520,13 +521,36 @@ class MainActivity : Activity() {
             attachChromeGesture(this)
 
             webChromeClient = object : WebChromeClient() {
-                // Swallow popups opened with window.open()/target="_blank".
+                /**
+                 * Give window.open()/target="_blank" a real WebView via the
+                 * transport. The popup becomes a normal tab so OAuth and payment
+                 * flows can complete and be closed like any other window.
+                 */
                 override fun onCreateWindow(
                     view: WebView?,
                     isDialog: Boolean,
                     isUserGesture: Boolean,
                     resultMsg: Message?
-                ): Boolean = true
+                ): Boolean {
+                    val message = resultMsg ?: return false
+                    val transport = message.obj as? WebView.WebViewTransport ?: return false
+                    val popupTab = Tab().apply {
+                        title = "Popup"
+                        url = tab.url
+                        currentHost = tab.currentHost
+                    }
+                    tabs.add(popupTab)
+                    val popupWebView = ensureWebView(popupTab)
+                    transport.webView = popupWebView
+                    message.sendToTarget()
+                    switchToTab(popupTab.id)
+                    return true
+                }
+
+                override fun onCloseWindow(window: WebView?) {
+                    val closing = tabs.firstOrNull { it.webView === window } ?: return
+                    closeTab(closing.id)
+                }
 
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     progressBar.progress = newProgress
@@ -581,47 +605,67 @@ class MainActivity : Activity() {
                     view: WebView?,
                     request: WebResourceRequest?
                 ): Boolean {
-                    val url = request?.url?.toString() ?: return true
+                    val url = request?.url?.toString() ?: return false
                     val headers: Map<String, String> = request.requestHeaders
                     val sourceUrl = RequestContext.pageUrl(headers, tab.url)
                     val sourceHost = RequestContext.hostOf(tab.url) ?: tab.currentHost
+                    val blocked = BlockerEngineManager.shouldBlockNavigation(url, sourceHost, sourceUrl)
+                    val action = NavigationDecision.of(url, blocked)
 
-                    if (BlockerEngineManager.shouldBlockNavigation(url, sourceHost, sourceUrl)) {
-                        blockedCount.incrementAndGet()
-                        view?.post { updateBlockerUi() }
-                        return true
-                    }
-
-                    if (url.startsWith("http://", ignoreCase = true) ||
-                        url.startsWith("https://", ignoreCase = true)
-                    ) {
-                        val secureUrl = upgradeToHttps(url)
-                        val loadHere = {
-                            tab.lastFailedHttps = null
-                            tab.url = secureUrl
-                            tab.currentHost = hostFrom(secureUrl)
-                            view?.loadUrl(secureUrl, navigationHeaders())
-                            Unit
+                    when {
+                        action.intercept && !action.upgradeToHttps && !action.openExternally -> {
+                            blockedCount.incrementAndGet()
+                            view?.post { updateBlockerUi() }
+                            return true
                         }
-                        // Never let a subframe or ad iframe launch the YouTube app.
-                        if (request.isForMainFrame &&
-                            handleYouTubeHandoff(secureUrl, loadHere)
-                        ) return true
-                        loadHere()
-                        return true
-                    }
 
-                    if (url.startsWith("mailto:", ignoreCase = true) ||
-                        url.startsWith("tel:", ignoreCase = true)
-                    ) {
-                        try {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        } catch (e: ActivityNotFoundException) {
-                            Toast.makeText(this@MainActivity, "No app for this link", Toast.LENGTH_SHORT).show()
+                        action.openExternally -> {
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (e: ActivityNotFoundException) {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "No app for this link",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            return true
+                        }
+
+                        action.upgradeToHttps -> {
+                            val secureUrl = upgradeToHttps(url)
+                            // The user explicitly accepted HTTP after an HTTPS
+                            // failure; do not silently upgrade it again.
+                            if (tab.lastFailedHttps == secureUrl) return false
+
+                            val loadHere = {
+                                tab.lastFailedHttps = null
+                                tab.url = secureUrl
+                                tab.currentHost = hostFrom(secureUrl)
+                                view?.loadUrl(secureUrl, navigationHeaders())
+                                Unit
+                            }
+                            // Never let a subframe or ad iframe launch the YouTube app.
+                            if (request.isForMainFrame &&
+                                handleYouTubeHandoff(secureUrl, loadHere)
+                            ) return true
+                            loadHere()
+                            return true
+                        }
+
+                        else -> {
+                            // Ordinary HTTPS navigation stays with WebView so its
+                            // Referer, gesture state and history are preserved.
+                            if (request.isForMainFrame) {
+                                val loadHere = {
+                                    view?.loadUrl(url, navigationHeaders())
+                                    Unit
+                                }
+                                if (handleYouTubeHandoff(url, loadHere)) return true
+                            }
+                            return false
                         }
                     }
-
-                    return true
                 }
 
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -635,7 +679,7 @@ class MainActivity : Activity() {
                     if (tab.id == currentTabId) urlEditText.setText(url ?: "")
                     if (BlockerEngineManager.isEnabled()) {
                         // Early injection: page scripts see DNT/GPC and no-referrer.
-                        view?.evaluateJavascript(AdBlocker.privacyJs(), null)
+                        view?.evaluateJavascript(AdBlocker.privacyJs(webrtcBlockEnabled()), null)
                     }
                     updateTabBar()
                     updateNavButtons()
@@ -658,7 +702,7 @@ class MainActivity : Activity() {
 
                     if (BlockerEngineManager.isEnabled()) {
                         // Repeat with its own guard in case the early injection was too soon.
-                        view?.evaluateJavascript(AdBlocker.privacyJs(), null)
+                        view?.evaluateJavascript(AdBlocker.privacyJs(webrtcBlockEnabled()), null)
                         val pageHost = hostFrom(url).orEmpty()
                         view?.evaluateJavascript(AdBlocker.cosmeticJsFor(pageHost), null)
                     }
@@ -934,6 +978,8 @@ class MainActivity : Activity() {
             else -> "YouTube: ask each time"
         }
         val dnsLabel = "DNS filter: ${if (DnsFilterService.isRunning) "ON" else "OFF"} (tap to switch)"
+        val webrtcLabel =
+            "Block WebRTC (stop IP leaks): ${if (webrtcBlockEnabled()) "ON" else "OFF"}"
 
         // Keep the option order stable: handleBlockerOption() maps by index.
         val options = arrayOf(
@@ -944,6 +990,7 @@ class MainActivity : Activity() {
             youtubeLabel,
             "Engine: ${BlockerEngineManager.activeEngineName()} (tap to switch)",
             dnsLabel,
+            webrtcLabel,
             "Close"
         )
         val icons = arrayOf(
@@ -952,6 +999,7 @@ class MainActivity : Activity() {
             R.drawable.ic_delete,
             R.drawable.ic_delete,
             R.drawable.ic_arrow_forward,
+            R.drawable.ic_tune,
             R.drawable.ic_tune,
             R.drawable.ic_tune,
             R.drawable.ic_close
@@ -1069,6 +1117,18 @@ class MainActivity : Activity() {
             }
             5 -> toggleFilterEngine()
             6 -> toggleDnsFilter()
+            7 -> {
+                val next = !webrtcBlockEnabled()
+                prefs.edit().putBoolean(KEY_WEBRTC_BLOCK, next).apply()
+                tabs.forEach { tab ->
+                    tab.webView?.evaluateJavascript(AdBlocker.privacyJs(next), null)
+                }
+                Toast.makeText(
+                    this,
+                    if (next) "WebRTC blocked (IP leaks stopped)" else "WebRTC enabled for calls",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -1200,6 +1260,9 @@ class MainActivity : Activity() {
         }
         shieldButton.alpha = if (enabled) 1f else 0.6f
     }
+
+    private fun webrtcBlockEnabled(): Boolean =
+        prefs.getBoolean(KEY_WEBRTC_BLOCK, DEFAULT_WEBRTC_BLOCK)
 
     private fun normalizeUrl(input: String): String {
         val text = input.trim()
@@ -1364,6 +1427,8 @@ class MainActivity : Activity() {
         private const val REQUEST_VPN = 43
         private const val MAX_RESUME_ATTEMPTS = 8
         private const val KEY_YOUTUBE_HANDOFF = "youtube_handoff"
+        private const val KEY_WEBRTC_BLOCK = "webrtc_block"
+        private const val DEFAULT_WEBRTC_BLOCK = true
         private const val HANDOFF_ASK = "ask"
         private const val HANDOFF_ALWAYS = "always"
         private const val HANDOFF_NEVER = "never"

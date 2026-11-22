@@ -9,6 +9,7 @@ use adblock::Engine;
 use jni::objects::{JObject, JString};
 use jni::sys::{jboolean, jstring, JNI_FALSE, JNI_TRUE};
 use jni::JNIEnv;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::RwLock;
 
@@ -95,13 +96,27 @@ fn get_string(env: &mut JNIEnv, value: &JString) -> Option<String> {
     Some(java_str.into())
 }
 
+/// JNI must never let a Rust panic unwind into the JVM. A failed decision is
+/// reported as "not blocked" so the page keeps loading instead of the app dying.
+fn catch_bool<F: FnOnce() -> jboolean>(body: F) -> jboolean {
+    catch_unwind(AssertUnwindSafe(body)).unwrap_or(JNI_FALSE)
+}
+
+fn catch_string<F: FnOnce() -> jstring>(body: F) -> jstring {
+    catch_unwind(AssertUnwindSafe(body)).unwrap_or(std::ptr::null_mut())
+}
+
 #[no_mangle]
 pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeInit(
     mut env: JNIEnv,
     _this: JObject,
     filters: JString,
 ) -> jboolean {
-    let Some(filters) = get_string(&mut env, &filters) else {
+    catch_bool(move || native_init(&mut env, _this, filters))
+}
+
+fn native_init(env: &mut JNIEnv, _this: JObject, filters: JString) -> jboolean {
+    let Some(filters) = get_string(env, &filters) else {
         return JNI_FALSE;
     };
     if filters.is_empty() {
@@ -129,11 +144,31 @@ pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeS
     resource_type: JString,
     method: JString,
 ) -> jboolean {
+    catch_bool(move || {
+        native_should_block(
+            &mut env,
+            _this,
+            url,
+            page_url,
+            resource_type,
+            method,
+        )
+    })
+}
+
+fn native_should_block(
+    env: &mut JNIEnv,
+    _this: JObject,
+    url: JString,
+    page_url: JString,
+    resource_type: JString,
+    method: JString,
+) -> jboolean {
     let (Some(url), Some(page_url), Some(resource_type), Some(method)) = (
-        get_string(&mut env, &url),
-        get_string(&mut env, &page_url),
-        get_string(&mut env, &resource_type),
-        get_string(&mut env, &method),
+        get_string(env, &url),
+        get_string(env, &page_url),
+        get_string(env, &resource_type),
+        get_string(env, &method),
     ) else {
         return JNI_FALSE;
     };
@@ -155,9 +190,13 @@ pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeS
 
 #[no_mangle]
 pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeStats(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _this: JObject,
 ) -> jstring {
+    catch_string(move || native_stats(&mut env, _this))
+}
+
+fn native_stats(env: &mut JNIEnv, _this: JObject) -> jstring {
     let initialized = ENGINE.read().map(|guard| guard.is_some()).unwrap_or(false);
     let bytes = FILTER_BYTES.load(Ordering::Relaxed);
     let json = format!("{{\"initialized\":{},\"filterBytes\":{}}}", initialized, bytes);
@@ -194,6 +233,12 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn panics_in_jni_body_are_caught() {
+        assert_eq!(JNI_FALSE, catch_bool(|| panic!("simulated JNI panic")));
+        assert!(catch_string(|| panic!("simulated JNI panic")).is_null());
     }
 
     #[test]

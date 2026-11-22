@@ -49,6 +49,37 @@ internal data class BlockedResponseSpec(
     val headers: Map<String, String> = mapOf("Cache-Control" to "no-store")
 )
 
+/**
+ * Pure navigation policy. WebView should keep ownership of ordinary HTTPS
+ * navigations; hand-written loadUrl calls drop request context and history.
+ */
+internal data class NavigationAction(
+    val intercept: Boolean,
+    val upgradeToHttps: Boolean,
+    val openExternally: Boolean
+)
+
+internal object NavigationDecision {
+
+    fun of(url: String?, blocked: Boolean): NavigationAction {
+        if (url.isNullOrEmpty()) return NavigationAction(false, false, false)
+        if (blocked) return NavigationAction(true, false, false)
+
+        return when {
+            url.startsWith("mailto:", ignoreCase = true) ||
+                url.startsWith("tel:", ignoreCase = true) ->
+                NavigationAction(true, false, true)
+
+            url.startsWith("http://", ignoreCase = true) ->
+                NavigationAction(true, true, false)
+
+            // Already HTTPS: return false so WebView preserves Referer,
+            // user-gesture state and the back stack.
+            else -> NavigationAction(false, false, false)
+        }
+    }
+}
+
 /** Benign empty responses keep blocked subresources from retrying in a loop. */
 internal object BlockedResponses {
 
@@ -142,6 +173,8 @@ object BlockerEngineManager {
     @Volatile
     private var rustActive = false
 
+    private val rustLoadLock = Any()
+
     // Some sites retry a blocked player-config request hundreds of times. After
     // a few blocks, let the same URL through for this page so playback survives
     // and the blocked counter does not explode.
@@ -169,15 +202,22 @@ object BlockerEngineManager {
     }
 
     fun useKotlin() {
-        rustRequested = false
-        rustActive = false
-        rustLoading = false
+        synchronized(rustLoadLock) {
+            rustRequested = false
+            rustActive = false
+            rustLoading = false
+        }
     }
 
     fun loadRust(context: Context, onResult: ((Boolean, String) -> Unit)?) {
-        if (rustLoading) return
-        rustRequested = true
-        rustLoading = true
+        val shouldStart = synchronized(rustLoadLock) {
+            if (rustLoading) false else {
+                rustRequested = true
+                rustLoading = true
+                true
+            }
+        }
+        if (!shouldStart) return
 
         Thread({
             var success = false
@@ -197,9 +237,11 @@ object BlockerEngineManager {
                 detail = "Rust engine failed: ${e.message ?: e.javaClass.simpleName}"
             }
 
-            rustActive = success
-            rustLoading = false
-            if (!success) rustRequested = false
+            synchronized(rustLoadLock) {
+                rustActive = success
+                rustLoading = false
+                if (!success) rustRequested = false
+            }
             onResult?.invoke(success, detail)
         }, "blocking-engine-init").start()
     }
