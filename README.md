@@ -100,8 +100,16 @@ The DNS filter is opt-in and DNS-only. It:
 
 YouTube opens in the browser by default. Background audio may pause when the
 screen is off because WebView cannot keep the same background session as the
-YouTube app. Ad requests are filtered, but ads stitched into the video stream by
-YouTube cannot be removed here.
+YouTube app.
+
+For YouTube only, the app starts a loopback HTTPS proxy (`127.0.0.1`) and uses
+AndroidX `ProxyController` to route `youtube.com` hosts through it. The proxy
+strips ad arrays from `youtubei/v1/get_watch` and `player` responses before the
+player reads them, which prevents the pre-roll ad stream from being selected.
+A locally generated CA certificate is trusted through
+`res/xml/network_security_config.xml`; the matching server key is bundled in
+`assets/lw_mitm.p12` with password `lwlocal`. The proxy never binds to a public
+interface and is stopped when the app exits. Other sites are not proxied.
 
 ## Licensing
 

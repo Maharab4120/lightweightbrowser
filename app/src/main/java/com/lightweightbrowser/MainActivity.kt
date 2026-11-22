@@ -48,6 +48,8 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.webkit.ProxyConfig
+import androidx.webkit.ProxyController
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
@@ -56,6 +58,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : Activity() {
@@ -110,6 +113,7 @@ class MainActivity : Activity() {
         blockedCount.set(prefs.getInt(KEY_BLOCKED_COUNT, 0))
 
         setupListeners()
+        configureYouTubeProxy()
         updateBlockerUi()
         requestNotificationPermissionIfNeeded()
 
@@ -1294,6 +1298,25 @@ class MainActivity : Activity() {
         shieldButton.alpha = if (enabled) 1f else 0.6f
     }
 
+    private fun configureYouTubeProxy() {
+        if (!BlockerEngineManager.isEnabled()) return
+        val proxyPort = YoutubeProxy.start(applicationContext)
+        if (proxyPort == 0) return
+        try {
+            val builder = ProxyConfig.Builder()
+                .addProxyRule("127.0.0.1:$proxyPort", ProxyConfig.MATCH_HTTPS)
+                .addBypassRule("youtube.com")
+                .addBypassRule("*.youtube.com")
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE_REVERSE_BYPASS)) {
+                builder.setReverseBypassEnabled(true)
+            }
+            val executor = Executor { runnable -> runOnUiThread(runnable) }
+            ProxyController.getInstance().setProxyOverride(builder.build(), executor) {}
+        } catch (e: Exception) {
+            YoutubeProxy.stop()
+        }
+    }
+
     /** Strips ad arrays from youtubei JSON responses before the player reads them. */
     private fun rewriteYouTubeJson(request: WebResourceRequest): WebResourceResponse? = try {
         val method = request.method ?: "GET"
@@ -1584,6 +1607,8 @@ class MainActivity : Activity() {
             clearBrowsingData(silent = true)
         }
         tabs.forEach { it.webView?.destroy() }
+        ProxyController.getInstance().clearProxyOverride({}, {})
+        YoutubeProxy.stop()
         super.onDestroy()
     }
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- The local MITM CA is bundled solely for the 127.0.0.1 YouTube proxy. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/lw_ca" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
