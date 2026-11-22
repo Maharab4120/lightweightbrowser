@@ -11,14 +11,26 @@ if [ -f "$HOME/.cargo/env" ]; then
     source "$HOME/.cargo/env"
 fi
 
-SDK_DIR="$(grep '^sdk.dir=' local.properties | head -1 | cut -d= -f2-)"
+SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+if [ -z "${SDK_DIR}" ] && [ -f local.properties ]; then
+    SDK_DIR="$(grep '^sdk.dir=' local.properties | head -1 | cut -d= -f2-)"
+fi
 if [ -z "${SDK_DIR}" ]; then
-    echo "sdk.dir not found in local.properties" >&2
+    echo "Set ANDROID_SDK_ROOT or add sdk.dir to local.properties" >&2
     exit 1
 fi
-NDK_DIR="$(find "$SDK_DIR/ndk" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1 || true)"
+
+NDK_DIR="${ANDROID_NDK_HOME:-}"
 if [ -z "${NDK_DIR}" ]; then
-    echo "Android NDK not installed under $SDK_DIR/ndk" >&2
+    NDK_DIR="$(find "$SDK_DIR/ndk" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1 || true)"
+fi
+if [ -z "${NDK_DIR}" ]; then
+    echo "Android NDK not installed; set ANDROID_NDK_HOME or install one under $SDK_DIR/ndk" >&2
+    exit 1
+fi
+
+if ! command -v cargo-ndk >/dev/null 2>&1; then
+    echo "cargo-ndk is required: cargo install cargo-ndk" >&2
     exit 1
 fi
 

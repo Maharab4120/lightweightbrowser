@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.lightweightbrowser
 
 import android.app.Notification
 import android.app.NotificationChannel

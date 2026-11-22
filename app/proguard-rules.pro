@@ -21,11 +21,11 @@
 #-renamesourcefileattribute SourceFile
 
 # WebView's addJavascriptInterface() calls these methods by name.
--keepclassmembers class com.example.lightweightbrowser.MainActivity$BrowserJsBridge {
+-keepclassmembers class com.lightweightbrowser.MainActivity$BrowserJsBridge {
     public *;
 }
 
 # JNI symbol names are derived from this class and its native method names.
--keep class com.example.lightweightbrowser.RustAdBlocker {
+-keep class com.lightweightbrowser.RustAdBlocker {
     *;
 }

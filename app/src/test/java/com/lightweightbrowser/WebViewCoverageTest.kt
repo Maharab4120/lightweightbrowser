@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.lightweightbrowser
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals

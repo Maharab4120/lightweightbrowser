@@ -8,6 +8,7 @@
 local.properties
 
 # Generated build files
+build/
 app/build/
 rust/target/
 
@@ -16,3 +17,4 @@ tools/.filter-cache/
 
 # Binary packages
 *.apk
+*.aab

@@ -4,13 +4,15 @@ plugins {
 }
 
 android {
-    namespace 'com.example.lightweightbrowser'
-    compileSdk 34
+    namespace 'com.lightweightbrowser'
+    compileSdk 36
 
     defaultConfig {
-        applicationId "com.example.lightweightbrowser"
+        // Unique, non-example id suitable for Play submission. The Kotlin
+        // package stays com.lightweightbrowser; namespace owns generated R.
+        applicationId "io.github.maharab4120.lightweightbrowser"
         minSdk 24
-        targetSdk 34
+        targetSdk 36
         versionCode 1
         versionName "1.0"
 
@@ -22,6 +24,20 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // Direct APK installs get one small APK per ABI; Play receives an AAB.
+    // AGP cannot build split APKs and a bundle in the same invocation.
+    def buildingBundle = gradle.startParameter.taskNames.any {
+        it.toLowerCase().contains('bundle')
+    }
+    splits {
+        abi {
+            enable !buildingBundle
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            universalApk true
         }
     }
 

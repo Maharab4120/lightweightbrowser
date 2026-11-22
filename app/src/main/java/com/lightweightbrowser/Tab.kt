@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.lightweightbrowser
 
 import android.view.View
 import android.webkit.WebView

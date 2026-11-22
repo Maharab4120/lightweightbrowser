@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.lightweightbrowser
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -215,8 +215,8 @@ class DnsFilterService : VpnService() {
     }
 
     companion object {
-        const val ACTION_START = "com.example.lightweightbrowser.DNS_FILTER_START"
-        const val ACTION_STOP = "com.example.lightweightbrowser.DNS_FILTER_STOP"
+        const val ACTION_START = "com.lightweightbrowser.DNS_FILTER_START"
+        const val ACTION_STOP = "com.lightweightbrowser.DNS_FILTER_STOP"
 
         private const val TAG = "DnsFilterService"
         private const val SESSION_NAME = "LightweightBrowser DNS filter"

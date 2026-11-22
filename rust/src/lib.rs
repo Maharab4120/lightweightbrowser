@@ -107,7 +107,7 @@ fn catch_string<F: FnOnce() -> jstring>(body: F) -> jstring {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeInit(
+pub extern "system" fn Java_com_lightweightbrowser_RustAdBlocker_nativeInit(
     mut env: JNIEnv,
     _this: JObject,
     filters: JString,
@@ -136,7 +136,7 @@ fn native_init(env: &mut JNIEnv, _this: JObject, filters: JString) -> jboolean {
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeShouldBlock(
+pub extern "system" fn Java_com_lightweightbrowser_RustAdBlocker_nativeShouldBlock(
     mut env: JNIEnv,
     _this: JObject,
     url: JString,
@@ -189,7 +189,7 @@ fn native_should_block(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_com_example_lightweightbrowser_RustAdBlocker_nativeStats(
+pub extern "system" fn Java_com_lightweightbrowser_RustAdBlocker_nativeStats(
     mut env: JNIEnv,
     _this: JObject,
 ) -> jstring {
