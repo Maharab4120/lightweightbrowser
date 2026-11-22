@@ -394,40 +394,95 @@ object AdBlocker {
 
     /**
      * Site-specific helpers injected alongside the cosmetic CSS.
-     * watchseries.moe shows a first-party ad interstitial that must be clicked
-     * to start the video. This helper clicks it automatically; any popup it opens
-     * is opened as a normal tab and can be closed by the user.
+     * watchseries.moe has a first-party interstitial that must be clicked to
+     * start playback. watchseries.bar loads a third-party gambling overlay
+     * after Play; it is removed by host and short ad-text matching.
      */
     private fun siteScriptFor(host: String): String {
-        if (host != "watchseries.moe" && !host.endsWith(".watchseries.moe")) return ""
-        return """
-            (function () {
-                if (window.__lwWsAutoClick) return;
-                window.__lwWsAutoClick = true;
-                var done = false;
-                var tryClick = function () {
-                    if (done) return true;
-                    var el = document.getElementById('ws-interstitial');
-                    if (!el || !el.style) return false;
-                    var display = String(el.style.display || '').toLowerCase();
-                    if (display !== 'flex' && display !== 'block') return false;
-                    done = true;
-                    setTimeout(function () {
-                        try { el.click(); } catch (e) {}
-                        try { el.style.display = 'none'; } catch (e) {}
-                    }, 200);
-                    return true;
-                };
-                if (tryClick()) return;
-                var observer = new MutationObserver(function () {
-                    if (tryClick()) observer.disconnect();
-                });
-                observer.observe(document.documentElement || document, {
-                    childList: true, subtree: true, attributes: true,
-                    attributeFilter: ['style']
-                });
-            })();
-        """.trimIndent()
+        val isMoe = host == "watchseries.moe" || host.endsWith(".watchseries.moe")
+        val isBar = host == "watchseries.bar" || host.endsWith(".watchseries.bar")
+        if (!isMoe && !isBar) return ""
+        return buildString {
+            if (isMoe) {
+                append(
+                    """
+                    (function () {
+                        if (window.__lwWsAutoClick) return;
+                        window.__lwWsAutoClick = true;
+                        var done = false;
+                        var tryClick = function () {
+                            if (done) return true;
+                            var el = document.getElementById('ws-interstitial');
+                            if (!el || !el.style) return false;
+                            var display = String(el.style.display || '').toLowerCase();
+                            if (display !== 'flex' && display !== 'block') return false;
+                            done = true;
+                            setTimeout(function () {
+                                try { el.click(); } catch (e) {}
+                                try { el.style.display = 'none'; } catch (e) {}
+                            }, 200);
+                            return true;
+                        };
+                        if (tryClick()) return;
+                        var observer = new MutationObserver(function () {
+                            if (tryClick()) observer.disconnect();
+                        });
+                        observer.observe(document.documentElement || document, {
+                            childList: true, subtree: true, attributes: true,
+                            attributeFilter: ['style']
+                        });
+                    })();
+                    """.trimIndent()
+                )
+            }
+            if (isBar) {
+                if (isNotEmpty()) appendLine()
+                append(
+                    """
+                    (function () {
+                        if (window.__lwWsBarAdCleanup) return;
+                        window.__lwWsBarAdCleanup = true;
+                        var badHosts = ['hdaujcw.online', 'bk666win.hdaujcw.online',
+                            'krikya11.me', 'sharky777.xyz', 'stalkoda.com', 'llvpn.com'];
+                        var badText = /bk666|krikya|জ্যাকপট|খেলুন|খেলোয়াড়|উত্তোলন|ক্যাসিনো|বাজি|নিবন্ধন|প্রবেশ|ঘোষণা/i;
+                        function isAd(el) {
+                            try {
+                                var tag = String(el.tagName || '').toUpperCase();
+                                if (tag === 'VIDEO' || tag === 'AUDIO' || tag === 'SOURCE') return false;
+                                var src = el.getAttribute('src') || '';
+                                for (var i = 0; i < badHosts.length; i++) {
+                                    if (src.indexOf(badHosts[i]) >= 0) return true;
+                                }
+                                var text = (el.textContent || '').trim();
+                                if (!text || text.length > 400) return false;
+                                return badText.test(text);
+                            } catch (e) {
+                                return false;
+                            }
+                        }
+                        function cleanup() {
+                            var nodes = document.querySelectorAll('iframe,frame,div,section,aside,a,img');
+                            for (var i = 0; i < nodes.length; i++) {
+                                var el = nodes[i];
+                                if (isAd(el) && el.parentNode) el.parentNode.removeChild(el);
+                            }
+                        }
+                        cleanup();
+                        if (window.MutationObserver && document.documentElement) {
+                            var scheduled = false;
+                            new MutationObserver(function () {
+                                if (scheduled) return;
+                                scheduled = true;
+                                var run = function () { scheduled = false; cleanup(); };
+                                if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+                                else setTimeout(run, 50);
+                            }).observe(document.documentElement, {childList: true, subtree: true});
+                        }
+                    })();
+                    """.trimIndent()
+                )
+            }
+        }
     }
 
     private fun jsString(value: String): String = buildString {

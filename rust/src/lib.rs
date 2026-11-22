@@ -53,6 +53,12 @@ const REQUIRED_BLOCKS: &str = "
 ||connect.facebook.net^
 ||platform.twitter.com^
 ||amazon-adsystem.com^
+! Observed rotating gambling/ad affiliates on watchseries.bar.
+||hdaujcw.online^
+||krikya11.me^
+||sharky777.xyz^
+||stalkoda.com^
+||llvpn.com^
 ";
 
 /// Asset hosts needed by video players and sign-in. Only known subdomains are

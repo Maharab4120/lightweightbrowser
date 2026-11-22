@@ -126,4 +126,13 @@ class WebViewCoverageTest {
         assertTrue(js.contains("LWBridge.postMessage(playing ? 'media:1' : 'media:0')"))
         assertFalse(js.contains("LWBridge.onMediaState"))
     }
+
+    @Test
+    fun watchseriesBarGetsTargetedAdCleanup() {
+        val js = AdBlocker.cosmeticJsFor("watchseries.bar")
+        assertTrue(js.contains("hdaujcw.online"))
+        assertTrue(js.contains("krikya11.me"))
+        assertTrue(js.contains("bk666"))
+        assertFalse(AdBlocker.cosmeticJsFor("example.com").contains("hdaujcw.online"))
+    }
 }

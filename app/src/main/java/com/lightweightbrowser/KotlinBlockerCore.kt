@@ -48,7 +48,8 @@ internal class KotlinBlockerCore {
         "scorecardresearch.com", "quantserve.com", "hotjar.com", "mixpanel.com",
         "amplitude.com", "fullstory.com", "taboola.com", "outbrain.com",
         "bat.bing.com", "clarity.ms", "newrelic.com",
-        "connect.facebook.net", "platform.twitter.com", "amazon-adsystem.com"
+        "connect.facebook.net", "platform.twitter.com", "amazon-adsystem.com",
+        "hdaujcw.online", "krikya11.me", "sharky777.xyz", "stalkoda.com", "llvpn.com"
     )
 
     @Volatile
