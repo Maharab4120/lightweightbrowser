@@ -38,3 +38,9 @@ https://www.krikya11.me/?af=AG022370	https://watchseries.bar/movie/the-odyssey/1
 https://fecmsapi.sharky777.xyz/api/banner?is_live=1	https://watchseries.bar/movie/the-odyssey/1368337	xmlhttprequest	1
 https://stalkoda.com/code/	https://watchseries.bar/movie/the-odyssey/1368337	script	1
 https://llvpn.com/tag.min.js	https://watchseries.bar/movie/the-odyssey/1368337	script	1
+# YouTube: block ad endpoints, keep player and video hosts.
+https://www.youtube.com/ads/foo	https://www.youtube.com/watch?v=pRpeEdMmmQ0	other	1
+https://www.youtube.com/api/stats/ads?payload=1	https://www.youtube.com/watch?v=pRpeEdMmmQ0	xmlhttprequest	1
+https://googleads.g.doubleclick.net/pagead/ads?client=1	https://www.youtube.com/watch?v=pRpeEdMmmQ0	other	1
+https://www.youtube.com/watch?v=pRpeEdMmmQ0	https://www.youtube.com/	document	0
+https://i.ytimg.com/vi/pRpeEdMmmQ0/hqdefault.jpg	https://www.youtube.com/watch?v=pRpeEdMmmQ0	image	0

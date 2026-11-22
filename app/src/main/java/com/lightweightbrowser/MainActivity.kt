@@ -700,10 +700,6 @@ class MainActivity : Activity() {
                                 view?.loadUrl(secureUrl, navigationHeaders())
                                 Unit
                             }
-                            // Never let a subframe or ad iframe launch the YouTube app.
-                            if (request.isForMainFrame &&
-                                handleYouTubeHandoff(secureUrl, loadHere)
-                            ) return true
                             loadHere()
                             return true
                         }
@@ -711,13 +707,6 @@ class MainActivity : Activity() {
                         else -> {
                             // Ordinary HTTPS navigation stays with WebView so its
                             // Referer, gesture state and history are preserved.
-                            if (request.isForMainFrame) {
-                                val loadHere = {
-                                    view?.loadUrl(url, navigationHeaders())
-                                    Unit
-                                }
-                                if (handleYouTubeHandoff(url, loadHere)) return true
-                            }
                             return false
                         }
                     }
@@ -855,67 +844,6 @@ class MainActivity : Activity() {
         return webView
     }
 
-    /**
-     * YouTube cannot play reliably in a WebView: it pauses itself in the
-     * background and its ads are part of the video stream. Hand it to the
-     * native app, which supports real background playback and media controls.
-     */
-    private fun handleYouTubeHandoff(url: String, openHere: () -> Unit): Boolean {
-        val target = YouTubeTarget.from(url) ?: return false
-
-        when (prefs.getString(KEY_YOUTUBE_HANDOFF, HANDOFF_ASK)) {
-            HANDOFF_ALWAYS -> {
-                openInYouTubeApp(target, url, openHere)
-                return true
-            }
-            HANDOFF_NEVER -> return false
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Open in ${target.displayName}?")
-            .setMessage(
-                "The ${target.displayName} app supports background playback, screen-off audio, " +
-                    "and real media controls. WebView cannot."
-            )
-            .setPositiveButton("Open in app") { _, _ -> openInYouTubeApp(target, url, openHere) }
-            .setNeutralButton("Always in app") { _, _ ->
-                prefs.edit().putString(KEY_YOUTUBE_HANDOFF, HANDOFF_ALWAYS).apply()
-                openInYouTubeApp(target, url, openHere)
-            }
-            .setNegativeButton("Open here") { _, _ ->
-                prefs.edit().putString(KEY_YOUTUBE_HANDOFF, HANDOFF_NEVER).apply()
-                openHere()
-            }
-            .show()
-        return true
-    }
-
-    private fun openInYouTubeApp(
-        target: YouTubeAppTarget,
-        url: String,
-        fallback: () -> Unit
-    ) {
-        for (packageName in target.packageNames) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                setPackage(packageName)
-                addCategory(Intent.CATEGORY_DEFAULT)
-                addCategory(Intent.CATEGORY_BROWSABLE)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            try {
-                startActivity(intent)
-                return
-            } catch (e: ActivityNotFoundException) {
-                // Try the next available app package.
-            } catch (e: SecurityException) {
-                // Package is restricted on this device; try the next one.
-            }
-        }
-        Toast.makeText(this, "${target.displayName} app not available - opening here", Toast.LENGTH_SHORT)
-            .show()
-        fallback()
-    }
-
     private fun loadUrlInCurrentTab(input: String) {
         currentTab()?.let { loadUrlInTab(it, input) }
     }
@@ -934,7 +862,6 @@ class MainActivity : Activity() {
             switchToTab(tab.id)
             hideKeyboard()
         }
-        if (handleYouTubeHandoff(secureUrl, loadHere)) return
         loadHere()
     }
 
@@ -1057,12 +984,6 @@ class MainActivity : Activity() {
         val enabled = BlockerEngineManager.isEnabled()
         val state = if (enabled) "ON" else "OFF"
         val clearOnExit = prefs.getBoolean(KEY_CLEAR_ON_EXIT, false)
-        val handoffMode = prefs.getString(KEY_YOUTUBE_HANDOFF, HANDOFF_ASK) ?: HANDOFF_ASK
-        val youtubeLabel = when (handoffMode) {
-            HANDOFF_ALWAYS -> "YouTube: always in app"
-            HANDOFF_NEVER -> "YouTube: open in browser"
-            else -> "YouTube: ask each time"
-        }
         val dnsLabel = "DNS filter: ${if (DnsFilterService.isRunning) "ON" else "OFF"} (tap to switch)"
         val webrtcLabel =
             "Block WebRTC (stop IP leaks): ${if (webrtcBlockEnabled()) "ON" else "OFF"}"
@@ -1073,7 +994,6 @@ class MainActivity : Activity() {
             "Reset blocked count",
             "Clear browsing data now",
             "Clear data on exit: ${if (clearOnExit) "ON" else "OFF"}",
-            youtubeLabel,
             "Engine: ${BlockerEngineManager.activeEngineName()} (tap to switch)",
             dnsLabel,
             webrtcLabel,
@@ -1084,7 +1004,6 @@ class MainActivity : Activity() {
             R.drawable.ic_counter,
             R.drawable.ic_delete,
             R.drawable.ic_delete,
-            R.drawable.ic_arrow_forward,
             R.drawable.ic_tune,
             R.drawable.ic_tune,
             R.drawable.ic_tune,
@@ -1147,7 +1066,7 @@ class MainActivity : Activity() {
             })
             row.setOnClickListener {
                 dialog.dismiss()
-                handleBlockerOption(index, handoffMode, clearOnExit)
+                handleBlockerOption(index, clearOnExit)
             }
             container.addView(row)
         }
@@ -1159,7 +1078,7 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun handleBlockerOption(which: Int, handoffMode: String, clearOnExit: Boolean) {
+    private fun handleBlockerOption(which: Int, clearOnExit: Boolean) {
         when (which) {
             0 -> toggleBlocker()
             1 -> {
@@ -1184,26 +1103,9 @@ class MainActivity : Activity() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
-            4 -> {
-                val next = when (handoffMode) {
-                    HANDOFF_ASK -> HANDOFF_ALWAYS
-                    HANDOFF_ALWAYS -> HANDOFF_NEVER
-                    else -> HANDOFF_ASK
-                }
-                prefs.edit().putString(KEY_YOUTUBE_HANDOFF, next).apply()
-                Toast.makeText(
-                    this,
-                    when (next) {
-                        HANDOFF_ALWAYS -> "YouTube links open in the app"
-                        HANDOFF_NEVER -> "YouTube links open in this browser"
-                        else -> "YouTube will ask each time"
-                    },
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            5 -> toggleFilterEngine()
-            6 -> toggleDnsFilter()
-            7 -> {
+            4 -> toggleFilterEngine()
+            5 -> toggleDnsFilter()
+            6 -> {
                 val next = !webrtcBlockEnabled()
                 prefs.edit().putBoolean(KEY_WEBRTC_BLOCK, next).apply()
                 tabs.forEach { tab ->
@@ -1568,11 +1470,7 @@ class MainActivity : Activity() {
         private const val REQUEST_VPN = 43
         private const val REQUEST_FILE_CHOOSER = 44
         private const val MAX_RESUME_ATTEMPTS = 8
-        private const val KEY_YOUTUBE_HANDOFF = "youtube_handoff"
         private const val KEY_WEBRTC_BLOCK = "webrtc_block"
         private const val DEFAULT_WEBRTC_BLOCK = true
-        private const val HANDOFF_ASK = "ask"
-        private const val HANDOFF_ALWAYS = "always"
-        private const val HANDOFF_NEVER = "never"
     }
 }

@@ -8,6 +8,7 @@ douploads
 egydead
 file4go./ads.js
 genvideos./js/showads.js
+google.com/ads/
 intoupload
 media.foundit./trex/public/theme_3/dist/js/usertracking.js
 onlinevideoconverter

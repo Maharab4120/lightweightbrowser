@@ -19,6 +19,7 @@ Statuses: **works**, **partly works**, **missing**.
 | History | **missing** | WebView back/forward works, but there is no browsable history list. |
 | WebRTC privacy | **works** | Blocked by default via document-start script; can be toggled in Privacy shield. |
 | DNS filter | **works with limits** | Opt-in, DNS-only, IPv4 UDP system-resolver traffic through `10.23.42.2/32`. DoH/DoT/Private DNS and TCP DNS can bypass it. |
+| YouTube | **works with limits** | Links open in the browser, not the YouTube app. Ad endpoints are filtered; video/player hosts stay allowed. Stream-stitched ads cannot be removed without breaking playback. |
 
 ## Recommendation
 

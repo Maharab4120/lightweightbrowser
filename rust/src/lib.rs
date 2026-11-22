@@ -59,6 +59,13 @@ const REQUIRED_BLOCKS: &str = "
 ||sharky777.xyz^
 ||stalkoda.com^
 ||llvpn.com^
+! YouTube ad endpoints only; player/video hosts stay allowed.
+||googleads.g.doubleclick.net^$domain=youtube.com
+||pagead2.googlesyndication.com^$domain=youtube.com
+||googlesyndication.com^$domain=youtube.com
+||www.youtube.com/ads^
+||youtube.com/api/stats/ads
+||youtube.com/ads/
 ";
 
 /// Asset hosts needed by video players and sign-in. Only known subdomains are

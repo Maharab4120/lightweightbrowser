@@ -112,11 +112,10 @@ internal class KotlinBlockerCore {
         val host = parsed.second
 
         if (isBlockedHost(host, pageHost)) return true
-        // Allowlisted hosts win over URL-fragment rules too. This matches the
-        // exception semantics used by adblock-rust.
-        if (hostMatches(host, allowHosts)) return false
 
         val lowerUrl = url.lowercase(Locale.ROOT)
+        // A host allowlist suppresses host-based rules, not path-based rules:
+        // YouTube must stay reachable while its /ads endpoints stay blockable.
         if (allowMatcher.hasMatch(lowerUrl)) return false
         if (blockMatcher.hasMatch(lowerUrl)) return true
         if (isThirdParty(host, pageHost) && thirdPartyMatcher.hasMatch(lowerUrl)) return true

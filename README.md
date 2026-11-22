@@ -16,7 +16,8 @@ Privacy shield → **Engine**.
 - DuckDuckGo-style search from a single omnibox.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
 - Optional DNS filter using a local VPN route only for `10.23.42.2/32`.
-- YouTube handoff to the native app, with an "open here" choice.
+- YouTube opens in the browser like any other site; no native-app handoff.
+- YouTube ad endpoints are filtered while player/video hosts stay allowed.
 - Media notification controls, file uploads, downloads, and popup/tab support.
 - Real document-start privacy injection through `androidx.webkit`.
 
@@ -97,8 +98,10 @@ The DNS filter is opt-in and DNS-only. It:
 - filters IPv4 UDP queries to system-resolver servers and returns local NXDOMAIN for blocked hosts;
 - cannot see DoH, DoT, Private DNS, or TCP DNS traffic, which can bypass it.
 
-YouTube background audio is unreliable in a WebView, so supported YouTube links
-are handed to the native app by default.
+YouTube opens in the browser by default. Background audio may pause when the
+screen is off because WebView cannot keep the same background session as the
+YouTube app. Ad requests are filtered, but ads stitched into the video stream by
+YouTube cannot be removed here.
 
 ## Licensing
 

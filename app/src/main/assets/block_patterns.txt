@@ -23,6 +23,7 @@
 -wrapper-analytics-prod.cloudfunctions.net
 /ad/
 /ads/
+/ads?adunit
 /adserve
 /adslot
 /advert
@@ -2393,6 +2394,8 @@ yell-analytics-min.js
 yell-analytics.js
 yna_stat.js
 yofi-telemetry-prod.min.js
+youtube.com/ads/
+youtube.com/api/stats/ads
 youtubevideoanalytic.js
 ystat.js
 yt-track-streamer

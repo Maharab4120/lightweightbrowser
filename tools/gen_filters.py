@@ -337,9 +337,13 @@ EXTRA_PATTERNS = {
     "/ads/", "/ad/", "/advert", "/banner", "/popup", "/popunder",
     "/pop-up", "/pixel", "/beacon", "/analytics", "/gtm.js", "/adslot",
     "/adserve", "/tracking", "?ad=", "&ad=", "/sponsor",
+    "youtube.com/ads/", "youtube.com/api/stats/ads", "/ads?adunit",
 }
 patterns = sorted(set(block_patterns) | EXTRA_PATTERNS)[:6000]
 third_party_pattern_list = sorted(third_party_patterns)[:4000]
+# Keep allowed hosts' own /ads sections reachable in the Kotlin fallback;
+# YouTube ad endpoints are matched by the narrower youtube.com patterns.
+allow_patterns.add("google.com/ads/")
 allow_pattern_list = sorted(allow_patterns)[:6000]
 
 domain_host_rules = sorted(
