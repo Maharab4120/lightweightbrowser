@@ -51,6 +51,9 @@ import android.widget.Toast
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -655,6 +658,24 @@ class MainActivity : Activity() {
                             spec.headers,
                             ByteArrayInputStream(spec.body)
                         )
+                    }
+
+                    val requestUrl = request.url.toString()
+                    if (BlockerEngineManager.isEnabled() &&
+                        (requestUrl.contains("youtubei/v1/get_watch") ||
+                            requestUrl.contains("youtubei/v1/player"))
+                    ) {
+                        rewriteYouTubeJson(request)?.let { return it }
+                    }
+
+                    if (BlockerEngineManager.isEnabled() && request.isForMainFrame &&
+                        (request.method ?: "GET").equals("GET", ignoreCase = true) &&
+                        request.url.path == "/watch" &&
+                        hostFrom(request.url.toString())?.let {
+                            it == "youtube.com" || it.endsWith(".youtube.com")
+                        } == true
+                    ) {
+                        rewriteYouTubeWatch(request)?.let { return it }
                     }
 
                     return super.shouldInterceptRequest(view, request)
@@ -1271,6 +1292,112 @@ class MainActivity : Activity() {
             "Ad blocking off. Tap for settings."
         }
         shieldButton.alpha = if (enabled) 1f else 0.6f
+    }
+
+    /** Strips ad arrays from youtubei JSON responses before the player reads them. */
+    private fun rewriteYouTubeJson(request: WebResourceRequest): WebResourceResponse? = try {
+        val method = request.method ?: "GET"
+        val connection = URL(request.url.toString()).openConnection() as HttpURLConnection
+        connection.requestMethod = method
+        connection.instanceFollowRedirects = true
+        connection.setRequestProperty("Accept-Encoding", "identity")
+        request.requestHeaders.forEach { (name, value) ->
+            if (!name.equals("Accept-Encoding", ignoreCase = true)) {
+                connection.setRequestProperty(name, value)
+            }
+        }
+
+        val body = postDataOf(request)
+        if (body != null && !method.equals("GET", ignoreCase = true)) {
+            connection.doOutput = true
+            connection.outputStream.use { it.write(body) }
+        }
+
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        if (stream == null) {
+            connection.disconnect()
+            null
+        } else {
+            val bytes = stream.use { it.readBytes() }
+            connection.disconnect()
+            val json = String(bytes, Charsets.UTF_8)
+            val stripped = AdBlocker.stripYouTubeAdsFromJson(json)
+            val headers = connection.headerFields
+                .filterKeys { key ->
+                    key != null && !key.equals("Content-Length", ignoreCase = true) &&
+                        !key.equals("Content-Encoding", ignoreCase = true) &&
+                        !key.equals("Transfer-Encoding", ignoreCase = true)
+                }
+                .mapNotNull { (key, values) -> values.firstOrNull()?.let { key!! to it } }
+                .toMap()
+                .toMutableMap()
+            headers["Cache-Control"] = "no-store"
+            WebResourceResponse(
+                "application/json",
+                "UTF-8",
+                status,
+                connection.responseMessage,
+                headers,
+                ByteArrayInputStream(stripped.toByteArray(Charsets.UTF_8))
+            )
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun postDataOf(request: WebResourceRequest): ByteArray? = try {
+        val method = request.javaClass.getDeclaredMethod("getPostData")
+        method.isAccessible = true
+        val stream = method.invoke(request) as? InputStream
+        stream?.use { it.readBytes() }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Rewrites YouTube's watch HTML so the player never sees ad placements. */
+    private fun rewriteYouTubeWatch(request: WebResourceRequest): WebResourceResponse? = try {
+        val connection = URL(request.url.toString()).openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.instanceFollowRedirects = true
+        connection.setRequestProperty("Accept-Encoding", "identity")
+        request.requestHeaders.forEach { (name, value) ->
+            if (!name.equals("Accept-Encoding", ignoreCase = true)) {
+                connection.setRequestProperty(name, value)
+            }
+        }
+
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        if (stream == null) {
+            connection.disconnect()
+            null
+        } else {
+            val bytes = stream.use { it.readBytes() }
+            connection.disconnect()
+            val html = String(bytes, Charsets.UTF_8)
+            val stripped = AdBlocker.stripYouTubeAdsFromHtml(html)
+            val headers = connection.headerFields
+                .filterKeys { key ->
+                    key != null && !key.equals("Content-Length", ignoreCase = true) &&
+                        !key.equals("Content-Encoding", ignoreCase = true) &&
+                        !key.equals("Transfer-Encoding", ignoreCase = true)
+                }
+                .mapNotNull { (key, values) -> values.firstOrNull()?.let { key!! to it } }
+                .toMap()
+                .toMutableMap()
+            headers["Cache-Control"] = "no-store"
+            WebResourceResponse(
+                "text/html",
+                "UTF-8",
+                status,
+                connection.responseMessage,
+                headers,
+                ByteArrayInputStream(stripped.toByteArray(Charsets.UTF_8))
+            )
+        }
+    } catch (e: Exception) {
+        null
     }
 
     private fun handleDownload(

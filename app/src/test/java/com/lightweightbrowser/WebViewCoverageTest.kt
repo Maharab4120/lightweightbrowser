@@ -129,11 +129,25 @@ class WebViewCoverageTest {
     }
 
     @Test
+    fun youtubeWatchHtmlAdArraysAreStripped() {
+        val html = """var cfg={"videoDetails":{"title":"x"},"adPlacements":[{"ad":"a"}],"playerAds":[{"id":1}],"nested":{"x":"]"}};"""
+        val stripped = AdBlocker.stripYouTubeAdsFromHtml(html)
+        assertFalse(stripped.contains("\"adPlacements\":[{\"ad\""))
+        assertTrue(stripped.contains("\"adPlacements\":[]"))
+        assertTrue(stripped.contains("\"playerAds\":[]"))
+        assertTrue(stripped.contains("\"nested\":{\"x\":\"]\"}"))
+    }
+
+    @Test
     fun youtubeAdStrippingScriptIsGatedAndTargetsPlayerResponse() {
         val script = AdBlocker.youtubeAdScript(true)
         assertTrue(script.contains("adPlacements"))
         assertTrue(script.contains("playerAds"))
         assertTrue(script.contains("youtubei/v1/player"))
+        assertTrue(script.contains("bootstrapPlayerResponse"))
+        assertTrue(script.contains("youtubei/v1/get_watch"))
+        assertTrue(script.contains("ytp-ad-module"))
+        assertTrue(script.contains("ytm-companion-slot"))
         assertEquals("", AdBlocker.youtubeAdScript(false))
     }
 

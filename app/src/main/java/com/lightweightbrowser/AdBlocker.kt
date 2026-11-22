@@ -394,6 +394,65 @@ object AdBlocker {
         """.trimIndent()
     }
 
+    /** Replaces YouTube ad arrays with [] in HTML or a JSON response body. */
+    fun stripYouTubeAdsFromHtml(html: String): String = stripAdArrays(html)
+
+    fun stripYouTubeAdsFromJson(json: String): String = stripAdArrays(json)
+
+    private fun stripAdArrays(text: String): String {
+        var result = text
+        for (key in listOf(
+            "\"adPlacements\"", "\"playerAds\"", "\"ads\"", "\"adSlotRenderer\""
+        )) {
+            result = replaceJsonArray(result, key)
+        }
+        return result
+    }
+
+    private fun replaceJsonArray(text: String, key: String): String {
+        var result = text
+        var index = result.indexOf(key)
+        while (index >= 0) {
+            var colon = index + key.length
+            while (colon < result.length && result[colon] != ':') colon++
+            if (colon >= result.length) break
+            var start = colon + 1
+            while (start < result.length && result[start].isWhitespace()) start++
+            if (start >= result.length || result[start] != '[') {
+                index = result.indexOf(key, index + key.length)
+                continue
+            }
+            var depth = 0
+            var inString = false
+            var escaped = false
+            var end = start
+            for (i in start until result.length) {
+                val ch = result[i]
+                if (inString) {
+                    if (escaped) escaped = false
+                    else if (ch == '\\') escaped = true
+                    else if (ch == '"') inString = false
+                } else {
+                    when (ch) {
+                        '"' -> inString = true
+                        '[' -> depth++
+                        ']' -> {
+                            depth--
+                            if (depth == 0) {
+                                end = i
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            if (end <= start) break
+            result = result.substring(0, start) + "[]" + result.substring(end + 1)
+            index = result.indexOf(key, start + 2)
+        }
+        return result
+    }
+
     /**
      * Removes YouTube ad placements from the player response before the player
      * reads it. The ad stream itself uses googlevideo.com, the same host as the
@@ -405,19 +464,67 @@ object AdBlocker {
             window.__lwYouTubeAdStrip = true;
             if (!/(^|\.)youtube\.com$/.test(location.hostname)) return;
 
-            function strip(data) {
+            function strip(data, depth) {
+                depth = depth || 0;
+                if (!data || typeof data !== 'object' || depth > 24) return data;
+                if (Array.isArray(data)) {
+                    for (var i = 0; i < data.length; i++) strip(data[i], depth + 1);
+                    return data;
+                }
                 try {
-                    if (!data || typeof data !== 'object') return data;
-                    if ('playerAds' in data) data.playerAds = [];
-                    if ('adPlacements' in data) data.adPlacements = [];
-                    if ('ads' in data) data.ads = [];
-                    if ('adBreakHeartbeatParams' in data) delete data.adBreakHeartbeatParams;
-                    if (data.playabilityStatus && data.playabilityStatus.status) {
-                        // Keep playability untouched so the video still plays.
+                    for (var key in data) {
+                        if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
+                        if (key === 'adPlacements' || key === 'playerAds' ||
+                            key === 'ads' || key === 'adSlotRenderer') {
+                            data[key] = [];
+                        } else if (key === 'adBreakHeartbeatParams' ||
+                            key === 'adServingContext') {
+                            delete data[key];
+                        } else {
+                            strip(data[key], depth + 1);
+                        }
                     }
                 } catch (e) {}
                 return data;
             }
+
+            function stripJsonText(text) {
+                try { return JSON.stringify(strip(JSON.parse(text))); } catch (e) { return text; }
+            }
+
+            var originalFetch = window.fetch;
+            if (originalFetch) {
+                window.fetch = function (input, init) {
+                    return originalFetch.apply(this, arguments).then(function (response) {
+                        var url = typeof input === 'string' ? input :
+                            (input && input.url) || response.url || '';
+                        if (url.indexOf('youtubei/v1/get_watch') >= 0 ||
+                            url.indexOf('youtubei/v1/player') >= 0) {
+                            return response.clone().text().then(function (text) {
+                                return new Response(stripJsonText(text), {
+                                    status: response.status,
+                                    statusText: response.statusText,
+                                    headers: response.headers
+                                });
+                            });
+                        }
+                        return response;
+                    });
+                };
+            }
+
+            var originalText = Response.prototype.text;
+            Response.prototype.text = function () {
+                var self = this;
+                return originalText.apply(this, arguments).then(function (text) {
+                    var url = self.url || '';
+                    if (url.indexOf('youtubei/v1/get_watch') >= 0 ||
+                        url.indexOf('youtubei/v1/player') >= 0) {
+                        return stripJsonText(text);
+                    }
+                    return text;
+                });
+            };
 
             var originalJson = Response.prototype.json;
             Response.prototype.json = function () {
@@ -436,7 +543,9 @@ object AdBlocker {
                     get: function () {
                         var value = responseTextGet.get.call(this);
                         try {
-                            if (String(this.responseURL || '').indexOf('youtubei/v1/player') >= 0) {
+                            var u = String(this.responseURL || '');
+                            if (u.indexOf('youtubei/v1/player') >= 0 ||
+                                u.indexOf('youtubei/v1/get_watch') >= 0) {
                                 return JSON.stringify(strip(JSON.parse(value)));
                             }
                         } catch (e) {}
@@ -472,6 +581,48 @@ object AdBlocker {
                     set: function (value) { initialResponse = strip(value); return initialResponse; }
                 });
             } catch (e) {}
+
+            // Mobile YouTube uses ytplayer.bootstrapPlayerResponse instead of
+            // ytInitialPlayerResponse when navigating inside the SPA.
+            function patchYtplayer() {
+                try {
+                    if (!window.ytplayer || window.__lwYtplayerPatched) return;
+                    window.__lwYtplayerPatched = true;
+                    var stored = window.ytplayer.bootstrapPlayerResponse;
+                    if (stored) window.ytplayer.bootstrapPlayerResponse = strip(stored);
+                    stored = window.ytplayer.bootstrapPlayerResponse;
+                    Object.defineProperty(window.ytplayer, 'bootstrapPlayerResponse', {
+                        configurable: true,
+                        get: function () { return stored; },
+                        set: function (value) {
+                            stored = strip(value);
+                            return stored;
+                        }
+                    });
+                } catch (e) {}
+            }
+            patchYtplayer();
+            var patchTimer = setInterval(patchYtplayer, 50);
+            setTimeout(function () { clearInterval(patchTimer); }, 5000);
+
+            function removeAdOverlays() {
+                try {
+                    var ads = document.querySelectorAll(
+                        '.video-ads, .ytp-ad-module, .ytp-ad-player-overlay, ' +
+                        '.YtmCompanionAdRendererBadgeContainer, ytm-companion-slot, ' +
+                        'ytm-companion-ad-renderer'
+                    );
+                    for (var i = 0; i < ads.length; i++) {
+                        if (ads[i].parentNode) ads[i].parentNode.removeChild(ads[i]);
+                    }
+                } catch (e) {}
+            }
+            removeAdOverlays();
+            if (window.MutationObserver && document.documentElement) {
+                new MutationObserver(removeAdOverlays).observe(document.documentElement, {
+                    childList: true, subtree: true
+                });
+            }
         })();
     """.trimIndent()
 
