@@ -338,6 +338,9 @@ EXTRA_PATTERNS = {
     "/pop-up", "/pixel", "/beacon", "/analytics", "/gtm.js", "/adslot",
     "/adserve", "/tracking", "?ad=", "&ad=", "/sponsor",
     "youtube.com/ads/", "youtube.com/api/stats/ads", "/ads?adunit",
+    "youtube.com/ytcs/adview", "youtube.com/ytcs/adinteraction",
+    "youtube.com/pcs/activeview", "doubleclick.net/instream/ad_status.js",
+    "googlesyndication.com/sodar/", "google.com/pagead/",
 }
 patterns = sorted(set(block_patterns) | EXTRA_PATTERNS)[:6000]
 third_party_pattern_list = sorted(third_party_patterns)[:4000]

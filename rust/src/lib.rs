@@ -66,6 +66,12 @@ const REQUIRED_BLOCKS: &str = "
 ||www.youtube.com/ads^
 ||youtube.com/api/stats/ads
 ||youtube.com/ads/
+||youtube.com/ytcs/adview
+||youtube.com/ytcs/adinteraction
+||youtube.com/pcs/activeview
+||static.doubleclick.net/instream/ad_status.js
+||tpc.googlesyndication.com^
+||google.com/pagead/$domain=youtube.com
 ";
 
 /// Asset hosts needed by video players and sign-in. Only known subdomains are

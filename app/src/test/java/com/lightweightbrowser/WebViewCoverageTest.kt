@@ -129,6 +129,15 @@ class WebViewCoverageTest {
     }
 
     @Test
+    fun youtubeAdStrippingScriptIsGatedAndTargetsPlayerResponse() {
+        val script = AdBlocker.youtubeAdScript(true)
+        assertTrue(script.contains("adPlacements"))
+        assertTrue(script.contains("playerAds"))
+        assertTrue(script.contains("youtubei/v1/player"))
+        assertEquals("", AdBlocker.youtubeAdScript(false))
+    }
+
+    @Test
     fun watchseriesBarGetsTargetedAdCleanup() {
         val js = AdBlocker.cosmeticJsFor("watchseries.bar")
         assertTrue(js.contains("hdaujcw.online"))

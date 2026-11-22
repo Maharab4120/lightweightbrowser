@@ -185,6 +185,9 @@ class MainActivity : Activity() {
     }
 
     private fun bindViews() {
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
         urlEditText = findViewById(R.id.urlEditText)
         newTabButton = findViewById(R.id.newTabButton)
         shieldButton = findViewById(R.id.shieldButton)
@@ -545,7 +548,8 @@ class MainActivity : Activity() {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
                 WebViewCompat.addDocumentStartJavaScript(
                     this,
-                    AdBlocker.privacyJs(webrtcBlockEnabled()),
+                    AdBlocker.privacyJs(webrtcBlockEnabled()) + "\n" +
+                        AdBlocker.youtubeAdScript(BlockerEngineManager.isEnabled()),
                     setOf("*")
                 )
                 tab.documentStartInstalled = true
@@ -754,7 +758,11 @@ class MainActivity : Activity() {
                     if (tab.id == currentTabId) urlEditText.setText(url ?: "")
                     if (!tab.documentStartInstalled && BlockerEngineManager.isEnabled()) {
                         // Fallback for old WebView versions without document-start.
-                        view?.evaluateJavascript(AdBlocker.privacyJs(webrtcBlockEnabled()), null)
+                        view?.evaluateJavascript(
+                            AdBlocker.privacyJs(webrtcBlockEnabled()) + "\n" +
+                        AdBlocker.youtubeAdScript(BlockerEngineManager.isEnabled()),
+                            null
+                        )
                     }
                     updateTabBar()
                     updateNavButtons()

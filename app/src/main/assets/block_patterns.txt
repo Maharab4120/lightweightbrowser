@@ -859,6 +859,7 @@ dolwebanalytics.js
 dom-event-tracker.min.js
 domcount.nsf/webcounter
 doubleclick.net
+doubleclick.net/instream/ad_status.js
 dow_analytics.js
 download11.png
 dpistat/updater.php
@@ -1054,6 +1055,7 @@ google-analytics.com
 google-listings-and-ads/js/build/gtag-events.js
 google-nielsen-analytics.js
 google./pagead/lvz
+google.com/pagead/
 google/analytics.js
 google_adsense-
 google_analytics3_v2.js
@@ -1071,6 +1073,7 @@ googleanalyticsmodule.min.js
 googleanalyticsplus/distilled.firsttouch.js
 googleanalyticstracking.js
 googleeventtracking.js
+googlesyndication.com/sodar/
 googletagmanageranalytics.js
 googletrack.js
 googletracker.js
@@ -2396,6 +2399,9 @@ yna_stat.js
 yofi-telemetry-prod.min.js
 youtube.com/ads/
 youtube.com/api/stats/ads
+youtube.com/pcs/activeview
+youtube.com/ytcs/adinteraction
+youtube.com/ytcs/adview
 youtubevideoanalytic.js
 ystat.js
 yt-track-streamer

@@ -44,3 +44,8 @@ https://www.youtube.com/api/stats/ads?payload=1	https://www.youtube.com/watch?v=
 https://googleads.g.doubleclick.net/pagead/ads?client=1	https://www.youtube.com/watch?v=pRpeEdMmmQ0	other	1
 https://www.youtube.com/watch?v=pRpeEdMmmQ0	https://www.youtube.com/	document	0
 https://i.ytimg.com/vi/pRpeEdMmmQ0/hqdefault.jpg	https://www.youtube.com/watch?v=pRpeEdMmmQ0	image	0
+https://www.youtube.com/ytcs/adview?xi=abc	https://www.youtube.com/watch?v=pRpeEdMmmQ0	other	1
+https://www.youtube.com/pcs/activeview?xai=abc	https://www.youtube.com/watch?v=pRpeEdMmmQ0	other	1
+https://static.doubleclick.net/instream/ad_status.js	https://www.youtube.com/watch?v=pRpeEdMmmQ0	script	1
+https://tpc.googlesyndication.com/sodar/abc.js	https://www.youtube.com/watch?v=pRpeEdMmmQ0	script	1
+https://www.google.com/pagead/1p-user-list/123/	https://www.youtube.com/watch?v=pRpeEdMmmQ0	xmlhttprequest	1

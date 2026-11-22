@@ -395,6 +395,87 @@ object AdBlocker {
     }
 
     /**
+     * Removes YouTube ad placements from the player response before the player
+     * reads it. The ad stream itself uses googlevideo.com, the same host as the
+     * real video, so request blocking alone cannot tell them apart.
+     */
+    fun youtubeAdScript(enabled: Boolean): String = if (!enabled) "" else """
+        (function () {
+            if (window.__lwYouTubeAdStrip) return;
+            window.__lwYouTubeAdStrip = true;
+            if (!/(^|\.)youtube\.com$/.test(location.hostname)) return;
+
+            function strip(data) {
+                try {
+                    if (!data || typeof data !== 'object') return data;
+                    if ('playerAds' in data) data.playerAds = [];
+                    if ('adPlacements' in data) data.adPlacements = [];
+                    if ('ads' in data) data.ads = [];
+                    if ('adBreakHeartbeatParams' in data) delete data.adBreakHeartbeatParams;
+                    if (data.playabilityStatus && data.playabilityStatus.status) {
+                        // Keep playability untouched so the video still plays.
+                    }
+                } catch (e) {}
+                return data;
+            }
+
+            var originalJson = Response.prototype.json;
+            Response.prototype.json = function () {
+                var self = this;
+                return originalJson.apply(this, arguments).then(function (data) {
+                    return strip(data);
+                });
+            };
+
+            var responseTextGet = Object.getOwnPropertyDescriptor(
+                XMLHttpRequest.prototype, 'responseText'
+            );
+            if (responseTextGet && responseTextGet.get) {
+                Object.defineProperty(XMLHttpRequest.prototype, 'responseText', {
+                    configurable: true,
+                    get: function () {
+                        var value = responseTextGet.get.call(this);
+                        try {
+                            if (String(this.responseURL || '').indexOf('youtubei/v1/player') >= 0) {
+                                return JSON.stringify(strip(JSON.parse(value)));
+                            }
+                        } catch (e) {}
+                        return value;
+                    }
+                });
+            }
+
+            var responseGet = Object.getOwnPropertyDescriptor(
+                XMLHttpRequest.prototype, 'response'
+            );
+            if (responseGet && responseGet.get) {
+                Object.defineProperty(XMLHttpRequest.prototype, 'response', {
+                    configurable: true,
+                    get: function () {
+                        var value = responseGet.get.call(this);
+                        try {
+                            if (typeof value === 'string' &&
+                                String(this.responseURL || '').indexOf('youtubei/v1/player') >= 0) {
+                                return JSON.stringify(strip(JSON.parse(value)));
+                            }
+                        } catch (e) {}
+                        return value;
+                    }
+                });
+            }
+
+            var initialResponse;
+            try {
+                Object.defineProperty(window, 'ytInitialPlayerResponse', {
+                    configurable: true,
+                    get: function () { return initialResponse; },
+                    set: function (value) { initialResponse = strip(value); return initialResponse; }
+                });
+            } catch (e) {}
+        })();
+    """.trimIndent()
+
+    /**
      * Locally authored scriptlets. These are bundled with the app, never fetched
      * or executed from a filter-list server, and only remove overlays that both
      * look like an ad and explicitly label themselves as one.
