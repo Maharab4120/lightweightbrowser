@@ -3,6 +3,7 @@ package com.example.lightweightbrowser
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -12,6 +13,7 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -25,7 +27,9 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.window.OnBackInvokedDispatcher
 import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.URLUtil
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -44,6 +48,8 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
 import java.util.Locale
 import java.util.UUID
@@ -64,6 +70,8 @@ class MainActivity : Activity() {
     private lateinit var forwardButton: TextView
     private lateinit var reloadButton: TextView
     private lateinit var homeButton: TextView
+
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
     private val tabs = mutableListOf<Tab>()
     private var currentTabId: String? = null
@@ -135,7 +143,6 @@ class MainActivity : Activity() {
     }
 
     private inner class BrowserJsBridge {
-        @JavascriptInterface
         fun onMediaState(playing: Boolean) {
             runOnUiThread {
                 if (playing == mediaPlaying) return@runOnUiThread
@@ -517,7 +524,37 @@ class MainActivity : Activity() {
             // Privacy: never send cookies to third-party sites.
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
 
-            addJavascriptInterface(browserJsBridge, "LWBridge")
+            // WebMessageListener replaces the blanket @JavascriptInterface object.
+            // The JS object is only postMessage, and iframe messages are ignored.
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                WebViewCompat.addWebMessageListener(
+                    this,
+                    "LWBridge",
+                    setOf("*")
+                ) { _, message, _, isMainFrame, _ ->
+                    val data = if (isMainFrame) message.data else null
+                    when (data) {
+                        "media:1" -> browserJsBridge.onMediaState(true)
+                        "media:0" -> browserJsBridge.onMediaState(false)
+                    }
+                }
+            }
+
+            // Real document-start injection: runs before page scripts instead of
+            // racing them from onPageStarted.
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                WebViewCompat.addDocumentStartJavaScript(
+                    this,
+                    AdBlocker.privacyJs(webrtcBlockEnabled()),
+                    setOf("*")
+                )
+                tab.documentStartInstalled = true
+            }
+
+            setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+                handleDownload(tab, url, userAgent, contentDisposition, mimeType)
+            }
+
             attachChromeGesture(this)
 
             webChromeClient = object : WebChromeClient() {
@@ -550,6 +587,24 @@ class MainActivity : Activity() {
                 override fun onCloseWindow(window: WebView?) {
                     val closing = tabs.firstOrNull { it.webView === window } ?: return
                     closeTab(closing.id)
+                }
+
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    callback: ValueCallback<Array<Uri>>?,
+                    params: FileChooserParams?
+                ): Boolean {
+                    if (callback == null || params == null) return false
+                    filePathCallback?.onReceiveValue(null)
+                    filePathCallback = callback
+                    return try {
+                        startActivityForResult(params.createIntent(), REQUEST_FILE_CHOOSER)
+                        true
+                    } catch (e: ActivityNotFoundException) {
+                        filePathCallback = null
+                        Toast.makeText(this@MainActivity, "No file picker available", Toast.LENGTH_SHORT).show()
+                        false
+                    }
                 }
 
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -668,6 +723,37 @@ class MainActivity : Activity() {
                     }
                 }
 
+                override fun onRenderProcessGone(
+                    view: WebView?,
+                    detail: RenderProcessGoneDetail?
+                ): Boolean {
+                    val crashed = view ?: return false
+                    val deadTab = tabs.firstOrNull { it.webView === crashed } ?: return false
+                    val previousUrl = deadTab.url
+
+                    deadTab.rootView?.let { tabContentContainer.removeView(it) }
+                    deadTab.webView = null
+                    deadTab.progressBar = null
+                    deadTab.rootView = null
+                    deadTab.documentStartInstalled = false
+                    MediaPlaybackService.registerWebView(null)
+
+                    if (previousUrl.isEmpty()) {
+                        showSpeedDial(deadTab)
+                    } else {
+                        val fresh = ensureWebView(deadTab)
+                        fresh.loadUrl(previousUrl, navigationHeaders())
+                    }
+                    if (deadTab.id == currentTabId) switchToTab(deadTab.id)
+                    updateTabBar()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Page crashed — restored this tab",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return true
+                }
+
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, url, favicon)
                     if (!url.isNullOrEmpty()) {
@@ -677,8 +763,8 @@ class MainActivity : Activity() {
                     tab.title = hostFrom(url) ?: "Loading..."
                     progressBar.visibility = View.VISIBLE
                     if (tab.id == currentTabId) urlEditText.setText(url ?: "")
-                    if (BlockerEngineManager.isEnabled()) {
-                        // Early injection: page scripts see DNT/GPC and no-referrer.
+                    if (!tab.documentStartInstalled && BlockerEngineManager.isEnabled()) {
+                        // Fallback for old WebView versions without document-start.
                         view?.evaluateJavascript(AdBlocker.privacyJs(webrtcBlockEnabled()), null)
                     }
                     updateTabBar()
@@ -1217,12 +1303,28 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != REQUEST_VPN) return
-        if (resultCode == RESULT_OK) {
-            enableDnsFilter()
-        } else {
-            DnsFilterPrefs.setEnabled(this, false)
-            Toast.makeText(this, "DNS filter not enabled", Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            REQUEST_VPN -> {
+                if (resultCode == RESULT_OK) {
+                    enableDnsFilter()
+                } else {
+                    DnsFilterPrefs.setEnabled(this, false)
+                    Toast.makeText(this, "DNS filter not enabled", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            REQUEST_FILE_CHOOSER -> {
+                val callback = filePathCallback ?: return
+                filePathCallback = null
+                val clip = if (resultCode == RESULT_OK) data?.clipData else null
+                val results = when {
+                    resultCode != RESULT_OK -> null
+                    clip != null -> Array(clip.itemCount) { index -> clip.getItemAt(index).uri }
+                    data?.data != null -> arrayOf(data.data!!)
+                    else -> null
+                }
+                callback.onReceiveValue(results)
+            }
         }
     }
 
@@ -1259,6 +1361,45 @@ class MainActivity : Activity() {
             "Ad blocking off. Tap for settings."
         }
         shieldButton.alpha = if (enabled) 1f else 0.6f
+    }
+
+    private fun handleDownload(
+        tab: Tab,
+        url: String,
+        userAgent: String?,
+        contentDisposition: String?,
+        mimeType: String?
+    ) {
+        if (BlockerEngineManager.shouldBlockNavigation(url, tab.currentHost, tab.url)) {
+            blockedCount.incrementAndGet()
+            updateBlockerUi()
+            Toast.makeText(this, "Blocked download", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (url.startsWith("data:", ignoreCase = true) ||
+            url.startsWith("blob:", ignoreCase = true)
+        ) {
+            Toast.makeText(this, "This download is not supported", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle(fileName)
+            .setDescription("From ${RequestContext.hostOf(url) ?: "the web"}")
+            .setNotificationVisibility(
+                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            )
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+        if (!userAgent.isNullOrBlank()) request.addRequestHeader("User-Agent", userAgent)
+
+        try {
+            val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            manager.enqueue(request)
+            Toast.makeText(this, "Download started", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Could not start download", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun webrtcBlockEnabled(): Boolean =
@@ -1425,6 +1566,7 @@ class MainActivity : Activity() {
         private const val KEY_CURRENT_TAB = "current_tab"
         private const val REQUEST_POST_NOTIFICATIONS = 42
         private const val REQUEST_VPN = 43
+        private const val REQUEST_FILE_CHOOSER = 44
         private const val MAX_RESUME_ATTEMPTS = 8
         private const val KEY_YOUTUBE_HANDOFF = "youtube_handoff"
         private const val KEY_WEBRTC_BLOCK = "webrtc_block"

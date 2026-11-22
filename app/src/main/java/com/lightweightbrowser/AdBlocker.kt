@@ -198,7 +198,8 @@ object AdBlocker {
                         break;
                     }
                 }
-                try { LWBridge.onMediaState(playing); } catch (e) {}
+                // Scoped WebMessageListener: the app ignores messages from iframes.
+                try { LWBridge.postMessage(playing ? 'media:1' : 'media:0'); } catch (e) {}
             }
             document.addEventListener('play', report, true);
             document.addEventListener('pause', report, true);

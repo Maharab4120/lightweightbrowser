@@ -24,4 +24,7 @@ class Tab(
 
     /** Root view currently placed in the content container (speed dial or WebView wrapper). */
     var rootView: View? = null
+
+    /** True when androidx.webkit document-start scripts are installed on this WebView. */
+    var documentStartInstalled: Boolean = false
 }

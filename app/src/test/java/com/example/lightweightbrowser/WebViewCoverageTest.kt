@@ -119,4 +119,11 @@ class WebViewCoverageTest {
         assertTrue(allowed.contains("if (false)"))
         assertTrue(blocked.contains("__lwRtcOriginal"))
     }
+
+    @Test
+    fun mediaMonitorUsesScopedMessageBridge() {
+        val js = AdBlocker.mediaMonitorJs()
+        assertTrue(js.contains("LWBridge.postMessage(playing ? 'media:1' : 'media:0')"))
+        assertFalse(js.contains("LWBridge.onMediaState"))
+    }
 }
