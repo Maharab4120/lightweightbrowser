@@ -8,7 +8,7 @@
 !20min.ch	tdn.da-services.ch
 !24.rakuten.co.jp	r10s.jp
 !247sports.com,4029tv.com,bet.com,bloomberg.co.jp,bloomberg.com,cbc.ca,cbssports.com,cc.com,digi24.ro,gbnews.com,history.com,kcci.com,kcra.com,kmbc.com,koat.com,koco.com,ksbw.com,mynbc5.com,paramountplus.com,s.yimg.jp,sbs.com.au,sonyliv.com,tv.rakuten.co.jp,vk.sportsbull.jp,wapt.com,watchcharge.com,wbaltv.com,wcvb.com,wdsu.com,wesh.com,wgal.com,wisn.com,wjcl.com,wlky.com,wlwt.com,wmtw.com,wmur.com,worldsurfleague.com,wpbf.com,wtae.com,wvtm13.com,wxii12.com,wyff4.com	imasdk.googleapis.com
-!247sports.com,airtelxstream.in,antena3.ro,api.screen9.com,asianctv.upns.pro,asianembed.cam,autokult.pl,bbc.com,bloomberg.co.jp,bloomberg.com,bsfuji.tv,cbc.ca,cbsnews.com,cbssports.com,cnet.com,crunchyroll.com,delish.com,digi24.ro,distro.tv,doubtnut.com,einthusan.tv,etonline.com,filmweb.pl,france24.com,game.pointmall.rakuten.net,gamebox.gesoten.com,gamepix.com,gameplayneo.com,gbnews.com,geo.dailymotion.com,givemesport.com,gospodari.com,humix.com,ignboards.com,insideedition.com,laurelberninteriors.com,lemino.docomo.ne.jp,locipo.jp,maharashtratimes.com,maxpreps.com,metacritic.com,minigame.aeriagames.jp,missoulian.com,nettavisen.no,newsweek.com,njbeachcams.com,open.video,paralympic.org,paramountplus.com,player.abacast.net,player.amperwave.net,player.earthtv.com,player.performgroup.com,plex.tv,pointmall.rakuten.co.jp,realmadrid.com,rfi.fr,root.cz,rte.ie,s.yimg.jp,scrippsdigital.com,sonyliv.com,southpark.lat,southparkstudios.com,spiele.heise.de,sportsbull.jp,stirr.com,tbs.co.jp,tdn.com,truvid.com,tubitv.com,tunein.com,tv-asahi.co.jp,tv.abcnyheter.no,tv.finansavisen.no,tv.rakuten.co.jp,tver.jp,tvp.pl,univtec.com,video.tv-tokyo.co.jp,vlive.tv,watch.nba.com,weather.com,webdunia.com,wellgames.com,worldsurfleague.com,wowbiz.ro,wsj.com,wtk.pl,zdnet.com,zeebiz.com	imasdk.googleapis.com
+!247sports.com,airtelxstream.in,antena3.ro,api.screen9.com,asianctv.upns.pro,asianembed.cam,autokult.pl,bbc.com,bloomberg.co.jp,bloomberg.com,bsfuji.tv,cbc.ca,cbsnews.com,cbssports.com,cnet.com,crunchyroll.com,dashboard.videograph.ai,delish.com,digi24.ro,distro.tv,doubtnut.com,einthusan.tv,etonline.com,filmweb.pl,france24.com,game.pointmall.rakuten.net,gamebox.gesoten.com,gamepix.com,gameplayneo.com,gbnews.com,geo.dailymotion.com,givemesport.com,gospodari.com,humix.com,ignboards.com,insideedition.com,laurelberninteriors.com,lemino.docomo.ne.jp,locipo.jp,maharashtratimes.com,maxpreps.com,metacritic.com,minigame.aeriagames.jp,missoulian.com,nettavisen.no,newsweek.com,njbeachcams.com,open.video,paralympic.org,paramountplus.com,player.abacast.net,player.amperwave.net,player.earthtv.com,player.performgroup.com,plex.tv,pointmall.rakuten.co.jp,realmadrid.com,rfi.fr,root.cz,rte.ie,s.yimg.jp,scrippsdigital.com,sonyliv.com,southpark.lat,southparkstudios.com,spiele.heise.de,sportsbull.jp,stirr.com,tbs.co.jp,tdn.com,truvid.com,tubitv.com,tunein.com,tv-asahi.co.jp,tv.abcnyheter.no,tv.finansavisen.no,tv.rakuten.co.jp,tver.jp,tvp.pl,univtec.com,video.tv-tokyo.co.jp,vlive.tv,watch.nba.com,weather.com,webdunia.com,wellgames.com,worldsurfleague.com,wowbiz.ro,wsj.com,wtk.pl,zdnet.com,zeebiz.com	imasdk.googleapis.com
 !24kitchen.pt	players.fichub.com
 !24ur.com	cdn.jsdelivr.net
 !2v2.io,bigescapegames.com,brofist.io,cuberealm.io,findcat.io,geotastic.net,lordz.io	api.adinplay.com
@@ -433,7 +433,6 @@ eng-tips.com	engineering.com
 !equifax.ca	ci-mpsnare.iovation.com
 !espncricinfo.com	embed.ex.co
 !esradio.libertaddigital.com	imasdk.googleapis.com
-essentiallysports.com	maximise.nyc3.cdn.digitaloceanspaces.com
 !etail.market	cdn.deviceinf.com
 !etoday.co.kr	07c225f3.online
 !etoro.com	web-sdk.urbanairship.com
@@ -475,6 +474,7 @@ fileditch.com	hostslick.com
 flamecomics.xyz	players.radioonlinehd.net
 flamecomics.xyz,mgeko.cc	hosted.muses.org
 flickr.com	combo.staticflickr.com
+!flightradar24.com	gstatic.com
 !flytap.com	cdn.engagement.coremedia.cloud
 !focus.de	google-analytics.com
 !footshop.ro	sentry.ftshp.xyz
@@ -548,6 +548,7 @@ gogaytube.tv,shemaleporntube.tv	hprofits.com
 !golfnetwork.co.jp,tv-asahi.co.jp	ad-api-v01.uliza.jp
 !goltelevision.com	nqs.nice264.com
 !googleads.g.doubleclick.net	googleads.g.doubleclick.net
+!googleads.g.doubleclick.net	gstatic.com
 !googleads.g.doubleclick.net	tpc.googlesyndication.com
 !goseek.com	mediaalpha.com
 !gouv.fr,openservices.enedis.fr,rte.ie,tv5monde.com,uktvplay.co.uk,visaconcierge.eu,yourstory.com	tag.aticdn.net
@@ -655,6 +656,7 @@ inverse.com	imgix.video
 !ivoox.com	static.sunmedia.tv
 ixxi.com	amazonaws.com
 !japan.zdnet.com	aiasahi.jp
+javdesu.tv	blogger.googleusercontent.com
 !jaycar.com.au	dd.jaycar.com.au.first-party-js.datadome.co
 !jjazz.net,lamusica.com	adswizz.com
 !jmp.com	solr.sas.com
@@ -719,6 +721,7 @@ linkvertise.*	streamrail.com
 !live.bleacherreport.com	ugdturner.com
 !live.bleacherreport.com	v.fwmrm.net
 !logme.in,logmein.com	secure.logmein.com
+loptelink.com	googleusercontent.com
 !lrt.lt	galt.hit.gemius.pl
 !luluvdo.com	lulustream.com
 !luxuryrealestate.com	cloudfront.net
@@ -822,6 +825,7 @@ news.naver.com	ssl.pstatic.net
 !news.yahoo.co.jp	yimg.jp
 news.yahoo.com	yimg.com
 newsfirst.lk	storage.googleapis.com
+!newstak.in	scorecardresearch.com
 newsweek.com	api-location-prd.pelcro.com
 !newsweek.com	config.aps.amazon-adsystem.com
 !newsweek.com	newsweek.com
@@ -880,6 +884,7 @@ pccomponentes.com	omtrdc.net
 !pch.com	cdnjs.cloudflare.com
 !pch.com	code.jquery.com
 !pch.com	content.jwplatform.com
+!pch.com	gstatic.com
 !pch.com	imasdk.googleapis.com
 !pch.com	optimatic.com
 !pch.com	pchassets.com
@@ -1021,6 +1026,7 @@ sabc-plus.com	castoola.tv
 !sephora.com	sephora-track.inside-graph.com
 !serienjunkies.de	media.oadts.com
 !series-d.com	cdn.jsdelivr.net
+!series-d.com	googleusercontent.com
 series-d.com	imgur.com
 !sexviacam.com	chaturbate.com
 !seznam.cz	h.imedia.cz
@@ -1094,6 +1100,7 @@ spiegel.de	xplosion.de
 !superesportes.com.br	tags.t.tailtarget.com
 !supergames.com	imasdk.googleapis.com
 !supergames.com	universal.wgplayer.com
+!support.google.com	gstatic.com
 !surveyapp.ambivista.com	api.ipgeolocation.io
 !surveymonkey.co.uk,surveymonkey.com,surveymonkey.de	newrelic.com
 !suzylu.co.uk	imasdk.googleapis.com
@@ -1186,6 +1193,7 @@ unblocked.la	intercomcdn.com
 !unicef.de	google-analytics.com
 !unlockapk.com	googlesyndication.com
 uol.com.br	jsuol.com.br
+uploadbox.cc	gstatic.com
 !urbanglasgow.co.uk	fdyn.pubwise.io
 !valesdegasolina.mx	intelyvale.com.mx
 !verti.de	cdn.cookielaw.org

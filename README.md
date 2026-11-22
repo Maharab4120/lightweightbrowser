@@ -5,13 +5,14 @@ Kotlin. It uses `Activity + WebView`, keeps filtering decisions local, and does
 not depend on Material, AppCompat, or any UI toolkit.
 
 The Kotlin layer owns UI, tabs, settings, history-free browsing, notifications,
-and lifecycle. The optional Rust library only answers ad-block decisions through
-JNI. Fresh installs use the Kotlin fallback; the Brave Rust engine is opt-in via
+and lifecycle. The Rust library answers ad-block decisions through JNI. Fresh
+installs now use the Brave Rust engine by default, with the Kotlin fallback used
+only if the native library or filter load fails. You can still switch engines via
 Privacy shield → **Engine**.
 
 ## Features
 
-- Local ad/tracker filtering with bundled filter assets; no filter-list downloads.
+- Brave/EasyList/uBO-based filtering with bundled full filter assets, larger Kotlin fallback tables, and locally authored scriptlets; no filter-list downloads or remote script execution.
 - DuckDuckGo-style search from a single omnibox.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
 - Optional DNS filter using a local VPN route only for `10.23.42.2/32`.

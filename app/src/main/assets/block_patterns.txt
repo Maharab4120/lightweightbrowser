@@ -1074,7 +1074,6 @@ googletagmanageranalytics.js
 googletrack.js
 googletracker.js
 googletracking.js
-googleusercontent.com/tracker/
 gosstat_gokw.gif
 gosstat_gomp.gif
 gpt_ads-public.js
@@ -1082,11 +1081,6 @@ graphql/track-pageview
 grouptype=engagement&eventtype=click
 gs-analytics-init.js
 gs-analytics.js
-gstatic.com/gadf/ga_dyn.js
-gstatic.com/gen_204?
-gstatic.com/retail/v2_event.js
-gstatic.com/wcm/impl-
-gstatic.com/wcm/loader.js
 gtag/general_tracker.js
 gtm-data-layer-
 gtm-listeners.js
@@ -2039,6 +2033,7 @@ track.srv
 track.v2.js
 track/?&event
 track/?data
+track/?evt
 track/?verbose
 track/aggregate
 track/batch

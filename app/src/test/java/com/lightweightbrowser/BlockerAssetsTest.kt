@@ -38,7 +38,7 @@ class BlockerAssetsTest {
         assertTrue(patterns.contains("gtm.js"))
         assertTrue(patterns.contains("/ads/"))
         assertTrue(patterns.size in 1_000..5_000)
-        assertTrue(cosmetic.size in 5_000..20_000)
+        assertTrue(cosmetic.size in 5_000..30_000)
         assertTrue(cosmetic.any { it.startsWith("*\t.ad_banner") })
     }
 

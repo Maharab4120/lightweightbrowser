@@ -1557,9 +1557,9 @@ class MainActivity : Activity() {
         private const val KEY_USE_RUST_ENGINE = "use_rust_engine"
         private const val KEY_BLOCKED_COUNT = "blocked_count"
         private const val KEY_CLEAR_ON_EXIT = "clear_on_exit"
-        // Fresh installs stay on the verified Kotlin engine; Rust remains opt-in
-        // through Privacy shield -> Engine (tap to switch).
-        private const val DEFAULT_USE_RUST_ENGINE = false
+        // Brave/Rust is the default now; Kotlin remains a silent fallback if the
+        // native library or filter load fails. Engine can still be switched.
+        private const val DEFAULT_USE_RUST_ENGINE = true
         private const val KEY_TAB_IDS = "tab_ids"
         private const val KEY_TAB_URLS = "tab_urls"
         private const val KEY_TAB_TITLES = "tab_titles"

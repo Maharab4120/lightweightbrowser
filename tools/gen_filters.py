@@ -58,6 +58,8 @@ CURATED_ROOTS = {
     "adsterra.com", "propellerads.com", "popcash.net", "exoclick.com",
     "juicyads.com", "trafficjunky.com", "clickadu.com", "richads.com",
     "onclickads.net", "adf.ly", "bc.vc",
+    # Rotating gambling affiliates observed on watchseries.bar.
+    "hdaujcw.online", "krikya11.me", "sharky777.xyz", "stalkoda.com", "llvpn.com",
 }
 BULK_CDNS = (
     "cloudfront.net", "amazonaws.com", "azureedge.net", "akamaized.net",
@@ -327,8 +329,8 @@ def ranked_hosts(values, limit):
     return sorted(sorted(values, key=lambda host: (-host_score(host), host))[:limit])
 
 
-hosts = ranked_hosts(block_hosts, 15000)
-third_party = ranked_hosts(third_party_hosts, 4000)
+hosts = ranked_hosts(block_hosts, 30000)
+third_party = ranked_hosts(third_party_hosts, 8000)
 allow_host_list = sorted(allow_hosts)
 
 EXTRA_PATTERNS = {
@@ -336,14 +338,14 @@ EXTRA_PATTERNS = {
     "/pop-up", "/pixel", "/beacon", "/analytics", "/gtm.js", "/adslot",
     "/adserve", "/tracking", "?ad=", "&ad=", "/sponsor",
 }
-patterns = sorted(set(block_patterns) | EXTRA_PATTERNS)[:3000]
-third_party_pattern_list = sorted(third_party_patterns)[:2000]
-allow_pattern_list = sorted(allow_patterns)[:4000]
+patterns = sorted(set(block_patterns) | EXTRA_PATTERNS)[:6000]
+third_party_pattern_list = sorted(third_party_patterns)[:4000]
+allow_pattern_list = sorted(allow_patterns)[:6000]
 
 domain_host_rules = sorted(
     set(domain_block_rules) | {(domains, host, True) for domains, host in domain_allow_rules},
     key=lambda rule: (rule[0], rule[1], rule[2]),
-)[:8000]
+)[:16000]
 
 # Cosmetic rules: Brave's YouTube distraction lists are kept even when the
 # generic rule budget is full, because they are small and high value.
@@ -392,9 +394,9 @@ def domain_priority(rule):
     return priority, domains, selector
 
 
-generic = sorted(set(generic) - generic_exceptions, key=lambda s: (-selector_score(s), s))[:6000]
-domain_rules = sorted(set(domain_rules), key=domain_priority)[:5000]
-domain_exceptions = sorted(set(domain_exceptions), key=lambda rule: (rule[0], rule[1]))[:3000]
+generic = sorted(set(generic) - generic_exceptions, key=lambda s: (-selector_score(s), s))[:12000]
+domain_rules = sorted(set(domain_rules), key=domain_priority)[:10000]
+domain_exceptions = sorted(set(domain_exceptions), key=lambda rule: (rule[0], rule[1]))[:6000]
 
 (OUT / "block_hosts.txt").write_text("\n".join(hosts) + "\n", encoding="utf-8")
 (OUT / "allow_hosts.txt").write_text("\n".join(allow_host_list) + "\n", encoding="utf-8")

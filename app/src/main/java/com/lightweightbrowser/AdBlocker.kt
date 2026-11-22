@@ -33,7 +33,8 @@ object AdBlocker {
         "[id*=\"advert\"]", "[class*=\"advert\"]",
         "[id*=\"banner-ad\"]", "[class*=\"banner-ad\"]",
         "[id*=\"popup-ad\"]", "[class*=\"popup-ad\"]",
-        "[data-ad-slot]", "[data-ad-client]", "[data-ad-format]"
+        "[data-ad-slot]", "[data-ad-client]", "[data-ad-format]",
+        "[data-ad-unit]", "amp-ad", "amp-embed", "ins.adsbygoogle"
     )
 
     // Known non-content popups/overlays on ad-heavy streaming sites.
@@ -388,9 +389,73 @@ object AdBlocker {
                     }).observe(document.documentElement, {childList: true, subtree: true});
                 }
             })();
+            ${localScriptlets()}
             ${siteScriptFor(host)}
         """.trimIndent()
     }
+
+    /**
+     * Locally authored scriptlets. These are bundled with the app, never fetched
+     * or executed from a filter-list server, and only remove overlays that both
+     * look like an ad and explicitly label themselves as one.
+     */
+    private fun localScriptlets(): String = """
+        (function () {
+            if (window.__lwLocalScriptlets) return;
+            window.__lwLocalScriptlets = true;
+            var adLabel = /^(ad|ads|advertisement|sponsored|promoted|pubblicità|werbung|реклама|anuncio)$/i;
+            var adPhrase = /advertisement|sponsored content|advertising|реклама|promoted content/i;
+            function isOverlay(el) {
+                try {
+                    var style = window.getComputedStyle(el);
+                    var position = String(style.position || '');
+                    if (position !== 'fixed' && position !== 'absolute' && position !== 'sticky') return false;
+                    var z = parseInt(style.zIndex, 10) || 0;
+                    if (z < 100) return false;
+                    var rect = el.getBoundingClientRect();
+                    var area = rect.width * rect.height;
+                    var viewport = (window.innerWidth || 1) * (window.innerHeight || 1);
+                    return area > viewport * 0.12 && area < viewport * 0.98;
+                } catch (e) {
+                    return false;
+                }
+            }
+            function isLabelledAd(el) {
+                try {
+                    var own = '';
+                    for (var i = 0; i < el.childNodes.length; i++) {
+                        if (el.childNodes[i].nodeType === 3) own += el.childNodes[i].nodeValue || '';
+                    }
+                    own = own.trim();
+                    var aria = el.getAttribute('aria-label') || '';
+                    return (own.length > 0 && own.length < 80 &&
+                        (adLabel.test(own) || adPhrase.test(own))) || adPhrase.test(aria);
+                } catch (e) {
+                    return false;
+                }
+            }
+            function cleanup() {
+                var nodes = document.querySelectorAll('div,section,aside,iframe,ins');
+                for (var i = 0; i < nodes.length; i++) {
+                    var el = nodes[i];
+                    if (isOverlay(el) && isLabelledAd(el) && el.parentNode) {
+                        el.parentNode.removeChild(el);
+                    }
+                }
+            }
+            cleanup();
+            if (window.MutationObserver && document.documentElement) {
+                var scheduled = false;
+                new MutationObserver(function () {
+                    if (scheduled) return;
+                    scheduled = true;
+                    var run = function () { scheduled = false; cleanup(); };
+                    if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+                    else setTimeout(run, 50);
+                }).observe(document.documentElement, {childList: true, subtree: true});
+            }
+        })();
+    """.trimIndent()
 
     /**
      * Site-specific helpers injected alongside the cosmetic CSS.

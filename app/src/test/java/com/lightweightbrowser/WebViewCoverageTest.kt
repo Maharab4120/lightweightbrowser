@@ -107,6 +107,7 @@ class WebViewCoverageTest {
         val js = AdBlocker.cosmeticJsFor("example.com")
         assertTrue(js.contains("adHostLabels"))
         assertTrue(js.contains("adPathSegments"))
+        assertTrue(js.contains("__lwLocalScriptlets"))
         assertFalse(js.contains("indexOf(adWords"))
         assertFalse(js.contains("iframe[src*="))
     }
