@@ -266,7 +266,6 @@ cdn-net.com
 cdn.iraiser.eu
 cdn.playwire.com
 cdn.pogo.com
-cdn.segment.com
 cdnb.4strokemedia.com
 cdnjs.cloudflare.com
 cdnqq.net
@@ -476,6 +475,7 @@ firefaucet.win
 firefiles.org
 fishki.net
 flying-lines.com
+fonts.gstatic.com
 football-lineups.com
 forbes.com
 fordclub.eu
@@ -553,7 +553,6 @@ gocolumbialions.com
 gocomics.com
 gomiblog.com
 google.com
-googleusercontent.com
 googlevideo.com
 government-and-constitution.org
 gplinks.in
@@ -562,7 +561,6 @@ grafixfather.com
 grahaflasher.com
 groupbycloud.com
 gs.statcounter.com
-gstatic.com
 gsuite.tools
 guce.advertising.com
 guiamuriae.com.br
@@ -722,6 +720,10 @@ letocard.fr
 level.travel
 lewdzone.com
 lg-firmwares.com
+lh3.googleusercontent.com
+lh4.googleusercontent.com
+lh5.googleusercontent.com
+lh6.googleusercontent.com
 ligainsider.de
 lightning.bleacherreport.com
 lightnovelworld.com
@@ -1161,6 +1163,7 @@ src.fedoraproject.org
 src.litix.io
 srek.net
 srv024.service.canada.ca
+ssl.gstatic.com
 stackblitz.com
 standard.co.uk
 starachowice.eu
@@ -1379,6 +1382,7 @@ worldofbitco.in
 wowescape.com
 wrestlinginc.com
 wupfile.com
+www.gstatic.com
 www.pol.dk
 www.pussyspace.com
 www.pussyspace.net
@@ -1418,6 +1422,7 @@ youmath.it
 yoursavegames.com
 youtu.be
 youtube.com
+yt3.googleusercontent.com
 ytimg.com
 yu.xyz.mn
 yuru-mbti.com

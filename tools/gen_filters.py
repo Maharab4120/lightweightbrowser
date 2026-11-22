@@ -63,9 +63,15 @@ BULK_CDNS = (
     "cloudfront.net", "amazonaws.com", "azureedge.net", "akamaized.net",
     "fastly.net", "googleusercontent.com", "scdn.co",
 )
+# Keep video/player assets reachable without exempting every gstatic or
+# googleusercontent subdomain from filtering.
 ESSENTIAL_HOSTS = {
-    "googlevideo.com", "ytimg.com", "ggpht.com", "gstatic.com",
-    "googleusercontent.com", "youtube.com", "youtu.be", "google.com",
+    "googlevideo.com", "ytimg.com", "ggpht.com",
+    "www.gstatic.com", "fonts.gstatic.com", "ssl.gstatic.com",
+    "lh3.googleusercontent.com", "lh4.googleusercontent.com",
+    "lh5.googleusercontent.com", "lh6.googleusercontent.com",
+    "yt3.googleusercontent.com",
+    "youtube.com", "youtu.be", "google.com",
 }
 SKIP_MODIFIERS = {
     "replace", "redirect", "redirect-rule", "csp", "popup", "document",
@@ -252,7 +258,8 @@ for name, url, weight in SOURCES:
             if exception:
                 if domains:
                     domain_allow_rules.append((domains, host))
-                else:
+                elif "/" not in base and "?" not in base:
+                    # A path-specific exception must not whitelist the whole host.
                     allow_hosts.add(host)
                     note_host(host, weight)
             elif domains:

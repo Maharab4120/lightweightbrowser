@@ -15,3 +15,21 @@ https://www.youtube.com/watch?v=abc	https://www.youtube.com/	document	0
 https://youtu.be/abc	https://example.com/article	document	0
 https://www.google.com/ads/foo.js	https://example.com/article	script	0
 https://cdn-media.brightline.tv/config/v3/1018.json	https://edition.cnn.com/	other	0
+# Curated exceptions for hosts that break sites when blocked unconditionally.
+https://www.googletagmanager.com/gtag/js?id=1	https://17track.net/	script	0
+https://www.googletagmanager.com/gtm.js	https://example.com/	script	1
+https://cdn.segment.com/analytics.js/	https://reuters.com/	script	0
+https://cdn.segment.com/analytics.js	https://example.com/	script	1
+https://connect.facebook.net/en_US/fbevents.js	https://elinoi.com/	script	0
+https://connect.facebook.net/en_US/sdk.js	https://example.com/	script	1
+# Narrow asset exceptions; genuine tracker subdomains remain blockable.
+https://fonts.gstatic.com/s/roboto/v30/font.woff2	https://example.com/	font	0
+https://csi.gstatic.com/csi	https://example.com/	other	1
+https://lh3.googleusercontent.com/a/abc	https://example.com/	image	0
+https://googleusercontent.com/tracker/abc	https://example.com/	other	1
+# Third-party and domain-specific interactions.
+https://static.example.com/app.js	https://blog.example.com/	script	0
+https://ads.example.net/banner.js	https://news.example.com/	script	1
+https://doubleclick.net/pagead/ad	https://news.example.com/	other	1
+https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js	https://www.youtube.com/	script	1
+https://example.org/collect?v=1	https://example.com/	xmlhttprequest	1

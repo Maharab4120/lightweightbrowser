@@ -3571,6 +3571,7 @@ crypto-ads.net
 crypto.egghead.link
 cryptobeneluxbanner.care
 cs.analytics.lego.com
+csi.gstatic.com
 csmetrics.wilton.com
 csp-collector.appspot.com
 csp.godaddy.com

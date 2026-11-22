@@ -24,7 +24,6 @@ const REQUIRED_BLOCKS: &str = "
 ||googleadservices.com^
 ||googlesyndication.com^
 ||google-analytics.com^
-||googletagmanager.com^
 ||googletagservices.com^
 ||adservice.google.com^
 ||adnxs.com^
@@ -45,29 +44,33 @@ const REQUIRED_BLOCKS: &str = "
 ||hotjar.com^
 ||mixpanel.com^
 ||amplitude.com^
-||segment.com^
 ||fullstory.com^
 ||taboola.com^
 ||outbrain.com^
 ||bat.bing.com^
 ||clarity.ms^
 ||newrelic.com^
-||facebook.net^
 ||connect.facebook.net^
 ||platform.twitter.com^
 ||amazon-adsystem.com^
 ";
 
-/// These hosts carry video/images, first-party app APIs, or player configuration
-/// that some sites retry endlessly when blocked. Exceptions are installed even
-/// if an upstream list says otherwise. Document exceptions protect navigation
-/// to YouTube itself without disabling subresource filtering on YouTube pages.
+/// Asset hosts needed by video players and sign-in. Only known subdomains are
+/// exempted: a blanket gstatic/googleusercontent exception would hide genuine
+/// tracker rules. Document exceptions protect navigation to YouTube itself
+/// without disabling subresource filtering on YouTube pages.
 const REQUIRED_EXCEPTIONS: &str = "
 @@||googlevideo.com^
 @@||ytimg.com^
 @@||ggpht.com^
-@@||gstatic.com^
-@@||googleusercontent.com^
+@@||www.gstatic.com^
+@@||fonts.gstatic.com^
+@@||ssl.gstatic.com^
+@@||lh3.googleusercontent.com^
+@@||lh4.googleusercontent.com^
+@@||lh5.googleusercontent.com^
+@@||lh6.googleusercontent.com^
+@@||yt3.googleusercontent.com^
 @@||youtube.com^$document
 @@||youtu.be^$document
 @@||cdn-media.brightline.tv^

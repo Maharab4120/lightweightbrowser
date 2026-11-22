@@ -22,8 +22,12 @@ internal class KotlinBlockerCore {
     private val thirdPartyMatcher = MultiPatternMatcher()
 
     private val essentialHosts = setOf(
-        "googlevideo.com", "ytimg.com", "ggpht.com", "gstatic.com",
-        "googleusercontent.com", "youtube.com", "youtu.be"
+        "googlevideo.com", "ytimg.com", "ggpht.com",
+        "www.gstatic.com", "fonts.gstatic.com", "ssl.gstatic.com",
+        "lh3.googleusercontent.com", "lh4.googleusercontent.com",
+        "lh5.googleusercontent.com", "lh6.googleusercontent.com",
+        "yt3.googleusercontent.com",
+        "youtube.com", "youtu.be"
     )
 
     // Player configuration that retries in a tight loop if blocked.
@@ -37,13 +41,13 @@ internal class KotlinBlockerCore {
 
     private val fallbackHosts = setOf(
         "doubleclick.net", "googleadservices.com", "googlesyndication.com",
-        "google-analytics.com", "googletagmanager.com", "googletagservices.com",
+        "google-analytics.com", "googletagservices.com",
         "adservice.google.com", "adnxs.com", "adsrvr.org", "rubiconproject.com",
         "pubmatic.com", "criteo.com", "casalemedia.com", "openx.net", "yieldmo.com",
         "3lift.com", "adcolony.com", "applovin.com", "unityads.com", "vungle.com",
         "scorecardresearch.com", "quantserve.com", "hotjar.com", "mixpanel.com",
-        "amplitude.com", "segment.com", "fullstory.com", "taboola.com", "outbrain.com",
-        "bat.bing.com", "clarity.ms", "newrelic.com", "facebook.net",
+        "amplitude.com", "fullstory.com", "taboola.com", "outbrain.com",
+        "bat.bing.com", "clarity.ms", "newrelic.com",
         "connect.facebook.net", "platform.twitter.com", "amazon-adsystem.com"
     )
 
@@ -153,7 +157,6 @@ internal class KotlinBlockerCore {
 
     private fun isBlockedHost(host: String, pageHost: String?): Boolean {
         if (hostMatches(host, allowHosts)) return false
-        if (hostMatches(host, blockHosts)) return true
 
         if (!pageHost.isNullOrEmpty()) {
             var allowedCandidate = pageHost.lowercase(Locale.ROOT)
@@ -164,7 +167,11 @@ internal class KotlinBlockerCore {
                 if (dot < 0) break
                 allowedCandidate = allowedCandidate.substring(dot + 1)
             }
+        }
 
+        if (hostMatches(host, blockHosts)) return true
+
+        if (!pageHost.isNullOrEmpty()) {
             if (isThirdParty(host, pageHost) && hostMatches(host, thirdPartyHosts)) return true
 
             var blockedCandidate = pageHost.lowercase(Locale.ROOT)
