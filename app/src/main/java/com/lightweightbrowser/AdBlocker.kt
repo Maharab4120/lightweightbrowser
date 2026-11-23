@@ -619,6 +619,29 @@ object AdBlocker {
             // makes WebView pause the autoplaying video.
             document.addEventListener('click', unmutePlayback, true);
 
+            // In-page (SPA) navigation to a watch page can leave the freshly
+            // created video paused at 0 because it misses the initial autoplay
+            // gesture. Give each new video one muted play attempt.
+            var attempted = new WeakSet();
+            function kickAutoplay() {
+                try {
+                    var videos = document.querySelectorAll('video');
+                    for (var i = 0; i < videos.length; i++) {
+                        var video = videos[i];
+                        if (attempted.has(video)) continue;
+                        if (video.readyState < 2 || video.currentTime > 0 ||
+                            !video.paused) {
+                            continue;
+                        }
+                        attempted.add(video);
+                        video.muted = true;
+                        var p = video.play();
+                        if (p && p.catch) p.catch(function () {});
+                    }
+                } catch (e) {}
+            }
+            setInterval(kickAutoplay, 250);
+
             function removeAdOverlays() {
                 try {
                     var ads = document.querySelectorAll(

@@ -55,6 +55,7 @@ dependencies {
     // androidx.webkit supplies true document-start injection and a scoped JS
     // message bridge. It is not a UI library; no Material/AppCompat is added.
     implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 
     // Test dependencies are build-time only and never enter the APK.
     testImplementation 'junit:junit:4.13.2'

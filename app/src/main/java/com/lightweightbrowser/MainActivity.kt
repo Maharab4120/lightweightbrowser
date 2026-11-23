@@ -49,14 +49,12 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executor
@@ -73,6 +71,7 @@ class MainActivity : Activity() {
     private lateinit var bottomToolbar: View
     private lateinit var chromePeek: View
     private lateinit var tabContentContainer: FrameLayout
+    private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var backButton: TextView
     private lateinit var forwardButton: TextView
     private lateinit var reloadButton: TextView
@@ -227,6 +226,7 @@ class MainActivity : Activity() {
         bottomToolbar = findViewById(R.id.bottomToolbar)
         chromePeek = findViewById(R.id.chromePeek)
         tabContentContainer = findViewById(R.id.tabContentContainer)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
         backButton = findViewById(R.id.backButton)
         forwardButton = findViewById(R.id.forwardButton)
         reloadButton = findViewById(R.id.reloadButton)
@@ -281,6 +281,17 @@ class MainActivity : Activity() {
         }
 
         chromePeek.setOnClickListener { setChromeVisible(true) }
+
+        swipeRefresh.setColorSchemeResources(R.color.brand_accent)
+        swipeRefresh.setProgressBackgroundColorSchemeResource(R.color.surface)
+        swipeRefresh.setOnRefreshListener {
+            if (currentTab()?.webView == null) {
+                swipeRefresh.isRefreshing = false
+                return@setOnRefreshListener
+            }
+            reloadCurrentPage()
+            swipeRefresh.postDelayed({ swipeRefresh.isRefreshing = false }, 8_000)
+        }
     }
 
     private fun restoreTabs(state: Bundle, ids: java.util.ArrayList<String>) {
@@ -687,24 +698,10 @@ class MainActivity : Activity() {
                         )
                     }
 
-                    val requestUrl = request.url.toString()
-                    if (BlockerEngineManager.isEnabled() &&
-                        (requestUrl.contains("youtubei/v1/get_watch") ||
-                            requestUrl.contains("youtubei/v1/player"))
-                    ) {
-                        rewriteYouTubeJson(request)?.let { return it }
-                    }
-
-                    if (BlockerEngineManager.isEnabled() && request.isForMainFrame &&
-                        (request.method ?: "GET").equals("GET", ignoreCase = true) &&
-                        request.url.path == "/watch" &&
-                        hostFrom(request.url.toString())?.let {
-                            it == "youtube.com" || it.endsWith(".youtube.com")
-                        } == true
-                    ) {
-                        rewriteYouTubeWatch(request)?.let { return it }
-                    }
-
+                    // YouTube ad rewriting is handled by the local HTTPS proxy,
+                    // which sees POST bodies. Rewriting here would re-issue
+                    // get_watch/player POSTs without their body and return 400,
+                    // leaving SPA navigations stuck on a blank player.
                     return super.shouldInterceptRequest(view, request)
                 }
 
@@ -827,6 +824,7 @@ class MainActivity : Activity() {
                     val pageTitle = view?.title?.takeIf { it.isNotBlank() }
                     tab.title = pageTitle ?: hostFrom(url) ?: "Web page"
                     progressBar.visibility = View.GONE
+                    if (tab.id == currentTabId) swipeRefresh.isRefreshing = false
                     if (tab.id == currentTabId) urlEditText.setText(tab.url)
                     updateTabBar()
                     updateNavButtons()
@@ -1364,112 +1362,6 @@ class MainActivity : Activity() {
         } catch (e: Exception) {
             YoutubeProxy.stop()
         }
-    }
-
-    /** Strips ad arrays from youtubei JSON responses before the player reads them. */
-    private fun rewriteYouTubeJson(request: WebResourceRequest): WebResourceResponse? = try {
-        val method = request.method ?: "GET"
-        val connection = URL(request.url.toString()).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.instanceFollowRedirects = true
-        connection.setRequestProperty("Accept-Encoding", "identity")
-        request.requestHeaders.forEach { (name, value) ->
-            if (!name.equals("Accept-Encoding", ignoreCase = true)) {
-                connection.setRequestProperty(name, value)
-            }
-        }
-
-        val body = postDataOf(request)
-        if (body != null && !method.equals("GET", ignoreCase = true)) {
-            connection.doOutput = true
-            connection.outputStream.use { it.write(body) }
-        }
-
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        if (stream == null) {
-            connection.disconnect()
-            null
-        } else {
-            val bytes = stream.use { it.readBytes() }
-            connection.disconnect()
-            val json = String(bytes, Charsets.UTF_8)
-            val stripped = AdBlocker.stripYouTubeAdsFromJson(json)
-            val headers = connection.headerFields
-                .filterKeys { key ->
-                    key != null && !key.equals("Content-Length", ignoreCase = true) &&
-                        !key.equals("Content-Encoding", ignoreCase = true) &&
-                        !key.equals("Transfer-Encoding", ignoreCase = true)
-                }
-                .mapNotNull { (key, values) -> values.firstOrNull()?.let { key!! to it } }
-                .toMap()
-                .toMutableMap()
-            headers["Cache-Control"] = "no-store"
-            WebResourceResponse(
-                "application/json",
-                "UTF-8",
-                status,
-                connection.responseMessage,
-                headers,
-                ByteArrayInputStream(stripped.toByteArray(Charsets.UTF_8))
-            )
-        }
-    } catch (e: Exception) {
-        null
-    }
-
-    private fun postDataOf(request: WebResourceRequest): ByteArray? = try {
-        val method = request.javaClass.getDeclaredMethod("getPostData")
-        method.isAccessible = true
-        val stream = method.invoke(request) as? InputStream
-        stream?.use { it.readBytes() }
-    } catch (e: Exception) {
-        null
-    }
-
-    /** Rewrites YouTube's watch HTML so the player never sees ad placements. */
-    private fun rewriteYouTubeWatch(request: WebResourceRequest): WebResourceResponse? = try {
-        val connection = URL(request.url.toString()).openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.instanceFollowRedirects = true
-        connection.setRequestProperty("Accept-Encoding", "identity")
-        request.requestHeaders.forEach { (name, value) ->
-            if (!name.equals("Accept-Encoding", ignoreCase = true)) {
-                connection.setRequestProperty(name, value)
-            }
-        }
-
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        if (stream == null) {
-            connection.disconnect()
-            null
-        } else {
-            val bytes = stream.use { it.readBytes() }
-            connection.disconnect()
-            val html = String(bytes, Charsets.UTF_8)
-            val stripped = AdBlocker.stripYouTubeAdsFromHtml(html)
-            val headers = connection.headerFields
-                .filterKeys { key ->
-                    key != null && !key.equals("Content-Length", ignoreCase = true) &&
-                        !key.equals("Content-Encoding", ignoreCase = true) &&
-                        !key.equals("Transfer-Encoding", ignoreCase = true)
-                }
-                .mapNotNull { (key, values) -> values.firstOrNull()?.let { key!! to it } }
-                .toMap()
-                .toMutableMap()
-            headers["Cache-Control"] = "no-store"
-            WebResourceResponse(
-                "text/html",
-                "UTF-8",
-                status,
-                connection.responseMessage,
-                headers,
-                ByteArrayInputStream(stripped.toByteArray(Charsets.UTF_8))
-            )
-        }
-    } catch (e: Exception) {
-        null
     }
 
     private fun handleDownload(

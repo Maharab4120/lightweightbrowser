@@ -15,6 +15,7 @@ Privacy shield → **Engine**.
 - Brave/EasyList/uBO-based filtering with bundled full filter assets, larger Kotlin fallback tables, and locally authored scriptlets; no filter-list downloads or remote script execution.
 - DuckDuckGo-style search from a single omnibox.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
+- Pull down from the top of a page to reload it.
 - Optional DNS filter using a local VPN route only for `10.23.42.2/32`.
 - YouTube opens in the browser like any other site; no native-app handoff.
 - YouTube ad endpoints are filtered while player/video hosts stay allowed.
