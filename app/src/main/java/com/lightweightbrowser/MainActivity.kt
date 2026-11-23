@@ -406,10 +406,12 @@ class MainActivity : Activity() {
         val row = index / columns
         val remainder = total % columns
         val onLastRow = row == total / columns && remainder != 0
+        // Center a short final row of equally sized tiles.
         val columnSpec = when {
-            onLastRow && remainder == 1 -> GridLayout.spec(1, 2, 1f)
-            onLastRow && remainder in 2..3 ->
-                GridLayout.spec(1 + (index % columns), 1, 1f)
+            onLastRow && remainder == 1 -> GridLayout.spec(2, 1, 1f)
+            onLastRow && remainder == 2 -> GridLayout.spec(2, 2, 1f)
+            onLastRow && remainder == 3 -> GridLayout.spec(1, 3, 1f)
+            onLastRow && remainder == 4 -> GridLayout.spec(1, 4, 1f)
             else -> GridLayout.spec(index % columns, 1, 1f)
         }
         return GridLayout.LayoutParams(
@@ -418,7 +420,7 @@ class MainActivity : Activity() {
         ).apply {
             width = 0
             height = ViewGroup.LayoutParams.WRAP_CONTENT
-            setMargins(dp(6), dp(6), dp(6), dp(6))
+            setMargins(dp(4), dp(4), dp(4), dp(4))
         }
     }
 
@@ -1570,7 +1572,7 @@ class MainActivity : Activity() {
     }
 
     companion object {
-        private const val SHORTCUT_COLUMNS = 4
+        private const val SHORTCUT_COLUMNS = 5
         private const val PREFS_NAME = "lightweight_browser_prefs"
         private const val KEY_BLOCKER_ENABLED = "blocker_enabled"
         private const val KEY_USE_RUST_ENGINE = "use_rust_engine"
