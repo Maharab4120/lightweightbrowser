@@ -605,6 +605,20 @@ object AdBlocker {
             var patchTimer = setInterval(patchYtplayer, 50);
             setTimeout(function () { clearInterval(patchTimer); }, 5000);
 
+            function unmutePlayback() {
+                try {
+                    var videos = document.querySelectorAll('video');
+                    for (var i = 0; i < videos.length; i++) {
+                        var video = videos[i];
+                        if (video.muted) video.muted = false;
+                        if (video.volume < 1) video.volume = 1;
+                    }
+                } catch (e) {}
+            }
+            // Only unmute after a real user gesture. Forcing unmute at load
+            // makes WebView pause the autoplaying video.
+            document.addEventListener('click', unmutePlayback, true);
+
             function removeAdOverlays() {
                 try {
                     var ads = document.querySelectorAll(

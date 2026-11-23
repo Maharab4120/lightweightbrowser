@@ -98,9 +98,12 @@ The DNS filter is opt-in and DNS-only. It:
 - filters IPv4 UDP queries to system-resolver servers and returns local NXDOMAIN for blocked hosts;
 - cannot see DoH, DoT, Private DNS, or TCP DNS traffic, which can bypass it.
 
-YouTube opens in the browser by default. Background audio may pause when the
-screen is off because WebView cannot keep the same background session as the
-YouTube app.
+YouTube opens in the browser by default. The app forces English for its own UI
+and adds `hl=en` to YouTube URLs, so YouTube does not switch to Bangla based on
+the device locale. Background audio may pause when the screen is off because
+WebView cannot keep the same background session as the YouTube app. Videos
+autoplay muted with a normal "Tap to unmute" control; the app does not force
+unmute because that makes WebView pause playback.
 
 For YouTube only, the app starts a loopback HTTPS proxy (`127.0.0.1`) and uses
 AndroidX `ProxyController` to route `youtube.com` hosts through it. The proxy

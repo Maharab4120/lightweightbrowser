@@ -8,6 +8,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.VpnService
@@ -78,6 +79,7 @@ class MainActivity : Activity() {
     private lateinit var homeButton: TextView
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var themeModeAtLaunch: String = THEME_SYSTEM
 
     private val tabs = mutableListOf<Tab>()
     private var currentTabId: String? = null
@@ -96,6 +98,27 @@ class MainActivity : Activity() {
 
     private val prefs by lazy {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        // Strict English plus a single theme override, applied before any
+        // resources or WebViews are created.
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(Locale.US)
+        val mode = newBase.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
+        themeModeAtLaunch = mode
+        when (mode) {
+            THEME_LIGHT -> config.uiMode =
+                (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                Configuration.UI_MODE_NIGHT_NO
+            THEME_DARK -> config.uiMode =
+                (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                Configuration.UI_MODE_NIGHT_YES
+        }
+        val context = newBase.createConfigurationContext(config)
+        Locale.setDefault(Locale.US)
+        super.attachBaseContext(context)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -717,7 +740,7 @@ class MainActivity : Activity() {
                         }
 
                         action.upgradeToHttps -> {
-                            val secureUrl = upgradeToHttps(url)
+                            val secureUrl = forceEnglishLocale(upgradeToHttps(url))
                             // The user explicitly accepted HTTP after an HTTPS
                             // failure; do not silently upgrade it again.
                             if (tab.lastFailedHttps == secureUrl) return false
@@ -882,7 +905,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadUrlInTab(tab: Tab, input: String) {
-        val url = normalizeUrl(input)
+        val url = forceEnglishLocale(normalizeUrl(input))
         if (url.isEmpty()) return
 
         val secureUrl = upgradeToHttps(url)
@@ -1020,6 +1043,12 @@ class MainActivity : Activity() {
         val dnsLabel = "DNS filter: ${if (DnsFilterService.isRunning) "ON" else "OFF"} (tap to switch)"
         val webrtcLabel =
             "Block WebRTC (stop IP leaks): ${if (webrtcBlockEnabled()) "ON" else "OFF"}"
+        val currentTheme = prefs.getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
+        val themeLabel = "Theme: ${when (currentTheme) {
+            THEME_LIGHT -> "Light"
+            THEME_DARK -> "Dark"
+            else -> "System"
+        }} (tap to switch)"
 
         // Keep the option order stable: handleBlockerOption() maps by index.
         val options = arrayOf(
@@ -1030,6 +1059,7 @@ class MainActivity : Activity() {
             "Engine: ${BlockerEngineManager.activeEngineName()} (tap to switch)",
             dnsLabel,
             webrtcLabel,
+            themeLabel,
             "Close"
         )
         val icons = arrayOf(
@@ -1037,6 +1067,7 @@ class MainActivity : Activity() {
             R.drawable.ic_counter,
             R.drawable.ic_delete,
             R.drawable.ic_delete,
+            R.drawable.ic_tune,
             R.drawable.ic_tune,
             R.drawable.ic_tune,
             R.drawable.ic_tune,
@@ -1150,6 +1181,19 @@ class MainActivity : Activity() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
+            7 -> {
+                val current = prefs.getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
+                val next = when (current) {
+                    THEME_SYSTEM -> THEME_LIGHT
+                    THEME_LIGHT -> THEME_DARK
+                    else -> THEME_SYSTEM
+                }
+                prefs.edit().putString(KEY_THEME_MODE, next).apply()
+                startActivityForResult(Intent(this, javaClass), REQUEST_THEME_CHANGE)
+                overridePendingTransition(0, 0)
+                finish()
+                overridePendingTransition(0, 0)
+            }
         }
     }
 
@@ -1239,6 +1283,11 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
+            REQUEST_THEME_CHANGE -> {
+                recreate()
+                return
+            }
+
             REQUEST_VPN -> {
                 if (resultCode == RESULT_OK) {
                     enableDnsFilter()
@@ -1465,6 +1514,22 @@ class MainActivity : Activity() {
     private fun webrtcBlockEnabled(): Boolean =
         prefs.getBoolean(KEY_WEBRTC_BLOCK, DEFAULT_WEBRTC_BLOCK)
 
+    /** Force English on YouTube; other sites keep their own locale. */
+    private fun forceEnglishLocale(url: String): String {
+        if (url.isEmpty()) return url
+        val host = hostFrom(url) ?: return url
+        if (host != "youtube.com" && !host.endsWith(".youtube.com") && host != "youtu.be") {
+            return url
+        }
+        return try {
+            val uri = Uri.parse(url)
+            if (uri.getQueryParameter("hl") != null) url
+            else uri.buildUpon().appendQueryParameter("hl", "en").build().toString()
+        } catch (e: Exception) {
+            url
+        }
+    }
+
     private fun normalizeUrl(input: String): String {
         val text = input.trim()
         if (text.isEmpty()) return ""
@@ -1629,8 +1694,13 @@ class MainActivity : Activity() {
         private const val REQUEST_POST_NOTIFICATIONS = 42
         private const val REQUEST_VPN = 43
         private const val REQUEST_FILE_CHOOSER = 44
+        private const val REQUEST_THEME_CHANGE = 45
         private const val MAX_RESUME_ATTEMPTS = 8
         private const val KEY_WEBRTC_BLOCK = "webrtc_block"
         private const val DEFAULT_WEBRTC_BLOCK = true
+        private const val KEY_THEME_MODE = "theme_mode"
+        private const val THEME_SYSTEM = "system"
+        private const val THEME_LIGHT = "light"
+        private const val THEME_DARK = "dark"
     }
 }
