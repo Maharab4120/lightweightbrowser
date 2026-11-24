@@ -98,7 +98,7 @@
         android:src="@drawable/ic_expand_more"
         android:visibility="gone" />
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    <com.lightweightbrowser.TabSwipeRefreshLayout
         android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -108,7 +108,7 @@
             android:id="@+id/tabContentContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+    </com.lightweightbrowser.TabSwipeRefreshLayout>
 
     <LinearLayout
         android:id="@+id/bottomToolbar"

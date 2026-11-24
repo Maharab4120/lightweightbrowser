@@ -49,7 +49,6 @@ import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewCompat
@@ -71,7 +70,7 @@ class MainActivity : Activity() {
     private lateinit var bottomToolbar: View
     private lateinit var chromePeek: View
     private lateinit var tabContentContainer: FrameLayout
-    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var swipeRefresh: TabSwipeRefreshLayout
     private lateinit var backButton: TextView
     private lateinit var forwardButton: TextView
     private lateinit var reloadButton: TextView
@@ -233,6 +232,15 @@ class MainActivity : Activity() {
         chromePeek = findViewById(R.id.chromePeek)
         tabContentContainer = findViewById(R.id.tabContentContainer)
         swipeRefresh = findViewById(R.id.swipeRefresh)
+        swipeRefresh.canScrollUpProvider = {
+            val current = currentTab()
+            val web = current?.webView
+            if (web != null) {
+                web.scrollY > 0
+            } else {
+                (current?.rootView as? ScrollView)?.scrollY ?: 0 > 0
+            }
+        }
         backButton = findViewById(R.id.backButton)
         forwardButton = findViewById(R.id.forwardButton)
         reloadButton = findViewById(R.id.reloadButton)
