@@ -38,6 +38,14 @@ object AdBlocker {
     )
 
     // Known non-content popups/overlays on ad-heavy streaming sites.
+    // Upstream YouTube lists hide Shorts UI. Keep the navigation control usable.
+    private val youtubeUiExceptions = setOf(
+        ".pivot-shorts.pivot-bar-item-tab",
+        ".yt-simple-endpoint[title=\"Shorts\"]",
+        "ytm-shorts-lockup-view-model-v2",
+        ".big-shorts-singleton"
+    )
+
     private val siteCosmeticSelectors = mapOf(
         "watchseries.moe" to listOf(
             "#ws-subscribe", ".ws-subscribe", "#ws-notify", ".ws-notify",
@@ -128,6 +136,12 @@ object AdBlocker {
                     }
                 }
             }
+        }
+
+        listOf("youtube.com", "m.youtube.com").forEach { domain ->
+            domainCosmeticExceptions
+                .getOrPut(domain) { ArrayList() }
+                .addAll(youtubeUiExceptions)
         }
     }
 

@@ -354,6 +354,14 @@ domain_host_rules = sorted(
     key=lambda rule: (rule[0], rule[1], rule[2]),
 )[:16000]
 
+# Keep the YouTube Shorts navigation control; upstream lists hide it.
+YOUTUBE_UI_SELECTORS = {
+    ".pivot-shorts.pivot-bar-item-tab",
+    '.yt-simple-endpoint[title="Shorts"]',
+    "ytm-shorts-lockup-view-model-v2",
+    ".big-shorts-singleton",
+}
+
 # Cosmetic rules: Brave's YouTube distraction lists are kept even when the
 # generic rule budget is full, because they are small and high value.
 generic, generic_exceptions = [], set()
@@ -372,6 +380,11 @@ for domains, selector, exception in cosmetic:
     elif domains is None:
         generic.append(selector)
     else:
+        if selector in YOUTUBE_UI_SELECTORS and any(
+            domain in {"youtube.com", "m.youtube.com", "www.youtube.com"}
+            for domain in domains
+        ):
+            continue
         domain_rules.append((domains, selector))
 
 

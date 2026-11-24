@@ -67,5 +67,6 @@ class BlockerAssetsTest {
         val cosmetic = lines("cosmetic_rules.txt")
         assertTrue(cosmetic.any { it.startsWith("m.youtube.com\tytm-topbar-menu-button-renderer") })
         assertTrue(cosmetic.any { it.startsWith("youtube.com\t.masthead-ad-control") })
+        assertTrue(cosmetic.none { "pivot-shorts" in it })
     }
 }

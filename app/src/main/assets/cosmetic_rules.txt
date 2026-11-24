@@ -12394,7 +12394,6 @@
 !yuik.net	.advads-widget
 !zalora.co.id,zalora.co.th,zalora.com.hk,zalora.com.my,zalora.com.ph,zalora.com.tw,zalora.sg	.advertisement-block
 !zdnet.com	.sponsoredItem
-m.youtube.com	.big-shorts-singleton
 m.youtube.com	.mobile-topbar-header-content > ytm-menu
 m.youtube.com	.mobile-topbar-header-sign-in-button
 m.youtube.com	.pivot-bar-slide-in
@@ -12416,10 +12415,8 @@ youtube.com	#sticker-layer
 youtube.com	.ad-div
 youtube.com	.grid.ytd-browse > #primary > .style-scope > .ytd-rich-grid-renderer > .ytd-rich-grid-renderer > .ytd-ad-slot-renderer
 youtube.com	.masthead-ad-control
-youtube.com	.pivot-shorts.pivot-bar-item-tab
 youtube.com	.pyv-afc-ads-container
 youtube.com	.rich-section-content.fresh-feeds-dismissals
-youtube.com	.yt-simple-endpoint[title="Shorts"]
 youtube.com	.ytGridShelfViewModelHost
 youtube.com	.ytd-rich-item-renderer.style-scope > .ytd-rich-item-renderer > .ytd-ad-slot-renderer.style-scope
 youtube.com	.ytd-section-list-renderer > .ytd-item-section-renderer > ytd-search-pyv-renderer.ytd-item-section-renderer
@@ -12432,7 +12429,6 @@ youtube.com	ytd-item-section-renderer > .ytd-item-section-renderer > ytd-ad-slot
 youtube.com	ytd-video-masthead-ad-advertiser-info-renderer
 youtube.com	ytm-promoted-sparkles-web-renderer
 youtube.com	ytm-reel-shelf-renderer
-youtube.com	ytm-shorts-lockup-view-model-v2
 0123movies.*	#tab-ad
 0123movies.*	.fake_player
 0123movies.*	.mvic-btn
@@ -22394,3 +22390,7 @@ thespun.com	.m-video-player
 thestar.co.uk	.gOoqzH
 thestar.com	#sticky-ad-2
 thestar.com.my	.med-rec
+thestateofbrand.com	.cta-trail_component
+thestranger.com	.fish-butter
+thestreamable.com	#promo-signup-bottom-sheet
+thestreamable.com	.ad-728x90-min-height
