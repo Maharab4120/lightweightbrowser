@@ -12397,15 +12397,10 @@
 m.youtube.com	.mobile-topbar-header-content > ytm-menu
 m.youtube.com	.mobile-topbar-header-sign-in-button
 m.youtube.com	.pivot-bar-slide-in
-m.youtube.com	.rich-section-content
 m.youtube.com	.ytm-player-endscreen
 m.youtube.com	lazy-list > ad-slot-renderer
-m.youtube.com	ytm-comments-entry-point-header-renderer
 m.youtube.com	ytm-companion-slot[data-content-type] > ytm-companion-ad-renderer
-m.youtube.com	ytm-item-section-renderer.single-column-watch-next-modern-panels
-m.youtube.com	ytm-item-section-renderer[section-identifier="related-items"]
 m.youtube.com	ytm-rich-item-renderer > ad-slot-renderer
-m.youtube.com	ytm-slim-video-metadata-section-renderer
 m.youtube.com	ytm-topbar-menu-button-renderer
 youtube.com	#description-inner > ytd-merch-shelf-renderer > #main.ytd-merch-shelf-renderer
 youtube.com	#items.yt-horizontal-list-renderer > ytd-reel-item-renderer
@@ -22394,3 +22389,8 @@ thestateofbrand.com	.cta-trail_component
 thestranger.com	.fish-butter
 thestreamable.com	#promo-signup-bottom-sheet
 thestreamable.com	.ad-728x90-min-height
+thestreamable.com	.d-md-flex
+thestreet.com	.csw-ae-wide
+thestreet.com	.m-balloon-header
+thestreet.com	.m-detail--feature-spacer
+thestreet.com	.m-video-unit

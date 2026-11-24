@@ -43,7 +43,12 @@ object AdBlocker {
         ".pivot-shorts.pivot-bar-item-tab",
         ".yt-simple-endpoint[title=\"Shorts\"]",
         "ytm-shorts-lockup-view-model-v2",
-        ".big-shorts-singleton"
+        ".big-shorts-singleton",
+        "ytm-slim-video-metadata-section-renderer",
+        "ytm-comments-entry-point-header-renderer",
+        "ytm-item-section-renderer.single-column-watch-next-modern-panels",
+        "ytm-item-section-renderer[section-identifier=\"related-items\"]",
+        ".rich-section-content"
     )
 
     private val siteCosmeticSelectors = mapOf(
@@ -321,8 +326,11 @@ object AdBlocker {
             }
             if (matches) selectors.addAll(rules)
         }
-        // Generic rules last.
-        selectors.addAll(genericSelectors)
+        // Generic rules last, but skip them on YouTube: upstream generic
+        // selectors hide page UI such as video metadata and action buttons.
+        val isYouTube = hostMatchesDomain(normalizedHost, "youtube.com") ||
+            hostMatchesDomain(normalizedHost, "m.youtube.com")
+        if (!isYouTube) selectors.addAll(genericSelectors)
 
         selectors.removeAll(genericExceptions)
         for ((domain, rules) in domainCosmeticExceptions) {

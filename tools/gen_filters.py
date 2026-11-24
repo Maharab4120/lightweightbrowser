@@ -360,6 +360,11 @@ YOUTUBE_UI_SELECTORS = {
     '.yt-simple-endpoint[title="Shorts"]',
     "ytm-shorts-lockup-view-model-v2",
     ".big-shorts-singleton",
+    "ytm-slim-video-metadata-section-renderer",
+    "ytm-comments-entry-point-header-renderer",
+    "ytm-item-section-renderer.single-column-watch-next-modern-panels",
+    'ytm-item-section-renderer[section-identifier="related-items"]',
+    ".rich-section-content",
 }
 
 # Cosmetic rules: Brave's YouTube distraction lists are kept even when the
