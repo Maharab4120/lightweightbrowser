@@ -279,8 +279,7 @@ object AdBlocker {
         // Rule domains are lowercased at load time; CSS selectors are not.
         val normalizedHost = host.lowercase(Locale.ROOT)
         val selectors = LinkedHashSet<String>()
-        selectors.addAll(extraCosmeticSelectors)
-        selectors.addAll(genericSelectors)
+        // Host-specific rules first so they win the 2,200-selector budget.
         for ((domain, rules) in domainSelectors) {
             if (hostMatchesDomain(normalizedHost, domain)) {
                 selectors.addAll(rules)
@@ -294,6 +293,10 @@ object AdBlocker {
             }
             if (matches) selectors.addAll(rules)
         }
+        // Generic rules last.
+        selectors.addAll(genericSelectors)
+        selectors.addAll(extraCosmeticSelectors)
+
         selectors.removeAll(genericExceptions)
         for ((domain, rules) in domainCosmeticExceptions) {
             if (hostMatchesDomain(normalizedHost, domain)) {
@@ -301,12 +304,11 @@ object AdBlocker {
             }
         }
 
-        val chosen = selectors.take(2200)
-        val selectorList = chosen.joinToString(",")
-        val css = if (selectorList.isEmpty()) {
-            ""
-        } else {
-            "$selectorList{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}"
+        // One unparsable selector invalidates its whole comma-separated rule,
+        // so keep each rule small. The CSS still hides nodes added later.
+        val css = selectors.take(2200).chunked(400).joinToString("\n") { chunk ->
+            chunk.joinToString(",") +
+                "{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}"
         }
 
         return """
@@ -315,7 +317,6 @@ object AdBlocker {
                 window.__lwShieldInjected = true;
 
                 var cssText = ${jsString(css)};
-                var selectorText = ${jsString(selectorList)};
 
                 if (cssText && !document.getElementById('__lw_shield_style')) {
                     var style = document.createElement('style');
@@ -364,30 +365,6 @@ object AdBlocker {
                     }
                 };
                 cleanupFrames();
-
-                var apply = function () {
-                    cleanupFrames();
-                    if (!selectorText) return;
-                    try {
-                        var nodes = document.querySelectorAll(selectorText);
-                        for (var i = 0; i < nodes.length; i++) {
-                            nodes[i].style.setProperty('display', 'none', 'important');
-                            nodes[i].style.setProperty('visibility', 'hidden', 'important');
-                        }
-                    } catch (e) {}
-                };
-                apply();
-
-                if (window.MutationObserver && document.documentElement) {
-                    var scheduled = false;
-                    new MutationObserver(function () {
-                        if (scheduled) return;
-                        scheduled = true;
-                        var run = function () { scheduled = false; apply(); };
-                        if (window.requestAnimationFrame) window.requestAnimationFrame(run);
-                        else setTimeout(run, 50);
-                    }).observe(document.documentElement, {childList: true, subtree: true});
-                }
             })();
             ${localScriptlets()}
             ${siteScriptFor(host)}

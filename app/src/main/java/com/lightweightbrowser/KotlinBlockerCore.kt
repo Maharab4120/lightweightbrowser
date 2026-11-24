@@ -117,6 +117,8 @@ internal class KotlinBlockerCore {
         // A host allowlist suppresses host-based rules, not path-based rules:
         // YouTube must stay reachable while its /ads endpoints stay blockable.
         if (allowMatcher.hasMatch(lowerUrl)) return false
+        // A curated domain exception must also override generic URL patterns.
+        if (isDomainAllowed(host, pageHost)) return false
         if (blockMatcher.hasMatch(lowerUrl)) return true
         if (isThirdParty(host, pageHost) && thirdPartyMatcher.hasMatch(lowerUrl)) return true
         return false
@@ -153,6 +155,18 @@ internal class KotlinBlockerCore {
         val host = parsed.host?.lowercase(Locale.ROOT)?.trimEnd('.') ?: return null
         if (host.isEmpty()) return null
         return scheme to host
+    }
+
+    private fun isDomainAllowed(host: String, pageHost: String?): Boolean {
+        if (pageHost.isNullOrEmpty()) return false
+        var candidate = pageHost.lowercase(Locale.ROOT)
+        while (true) {
+            val allowed = domainAllowHosts[candidate]
+            if (allowed != null && hostMatches(host, allowed)) return true
+            val dot = candidate.indexOf('.')
+            if (dot < 0) return false
+            candidate = candidate.substring(dot + 1)
+        }
     }
 
     private fun isBlockedHost(host: String, pageHost: String?): Boolean {
@@ -249,7 +263,14 @@ internal class KotlinBlockerCore {
                 if (nodes[failState].output) nodes[current].output = true
 
                 for ((ch, child) in nodes[current].next) {
-                    val candidate = nodes[failState].next[ch]
+                    // Walk the failure chain until a transition for ch exists.
+                    // A single-level lookup misses matches whose failure state
+                    // is deeper in the trie.
+                    var failure = nodes[current].fail
+                    while (failure != 0 && !nodes[failure].next.containsKey(ch)) {
+                        failure = nodes[failure].fail
+                    }
+                    val candidate = nodes[failure].next[ch]
                     nodes[child].fail = if (candidate == null || candidate == child) 0 else candidate
                     queue.add(child)
                 }

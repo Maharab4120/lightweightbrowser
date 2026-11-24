@@ -69,7 +69,7 @@ class MediaPlaybackService : Service() {
         }
         ensureWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification())
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun setPlaying(value: Boolean) {
@@ -83,7 +83,7 @@ class MediaPlaybackService : Service() {
 
     private fun ensureWakeLock() {
         val lock = wakeLock ?: return
-        if (!lock.isHeld) lock.acquire()
+        if (!lock.isHeld) lock.acquire(10 * 60 * 1000L)
     }
 
     private fun releaseWakeLock() {

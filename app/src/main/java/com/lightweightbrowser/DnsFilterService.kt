@@ -34,6 +34,9 @@ class DnsFilterService : VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // A started service must call startForeground() before it returns, on
+        // every path, or Android raises "did not then call startForeground()".
+        startForeground(NOTIFICATION_ID, notification())
         if (intent?.action == ACTION_STOP) {
             shutdown()
             return START_NOT_STICKY
@@ -47,8 +50,6 @@ class DnsFilterService : VpnService() {
             stopSelf()
             return START_NOT_STICKY
         }
-
-        startForeground(NOTIFICATION_ID, notification())
 
         val builder = Builder()
             .setSession(SESSION_NAME)

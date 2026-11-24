@@ -712,6 +712,9 @@ class MainActivity : Activity() {
                     request: WebResourceRequest?
                 ): Boolean {
                     val url = request?.url?.toString() ?: return false
+                    // Subframes must navigate inside their own frame. Letting a
+                    // cross-origin iframe URL load here would hijack the tab.
+                    if (!request.isForMainFrame) return false
                     val headers: Map<String, String> = request.requestHeaders
                     val sourceUrl = RequestContext.pageUrl(headers, tab.url)
                     val sourceHost = RequestContext.hostOf(tab.url) ?: tab.currentHost
@@ -853,6 +856,23 @@ class MainActivity : Activity() {
 
                     val errorCode = error?.errorCode ?: 0
                     tab.lastFailedHttps = failedUrl
+
+                    val networkErrors = setOf(
+                        WebViewClient.ERROR_HOST_LOOKUP,
+                        WebViewClient.ERROR_CONNECT,
+                        WebViewClient.ERROR_TIMEOUT
+                    )
+                    if (errorCode in networkErrors) {
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Cannot reach the site")
+                            .setMessage(
+                                "Check your connection and try again. This looks like a " +
+                                    "network problem, not an HTTPS problem."
+                            )
+                            .setPositiveButton("OK", null)
+                            .show()
+                        return
+                    }
 
                     if (errorCode == WebViewClient.ERROR_FAILED_SSL_HANDSHAKE) {
                         AlertDialog.Builder(this@MainActivity)

@@ -129,6 +129,21 @@ class WebViewCoverageTest {
     }
 
     @Test
+    fun patternMatcherFollowsFailureChain() {
+        val core = KotlinBlockerCore().apply {
+            init(mapOf("block_patterns.txt" to listOf("aa", "bbaaa")))
+        }
+        assertTrue(core.shouldBlock("https://example.com/bbaabcbcac", false, "news.test"))
+    }
+
+    @Test
+    fun cosmeticCssHasNoSelectorSweepLoop() {
+        val js = AdBlocker.cosmeticJsFor("example.com")
+        assertFalse(js.contains("var apply = function ()"))
+        assertFalse(js.contains("querySelectorAll(selectorText)"))
+    }
+
+    @Test
     fun youtubeWatchHtmlAdArraysAreStripped() {
         val html = """var cfg={"videoDetails":{"title":"x"},"adPlacements":[{"ad":"a"}],"playerAds":[{"id":1}],"nested":{"x":"]"}};"""
         val stripped = AdBlocker.stripYouTubeAdsFromHtml(html)
