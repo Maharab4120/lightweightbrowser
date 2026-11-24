@@ -28,6 +28,14 @@ class MediaPlaybackService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var mediaSession: MediaSession? = null
     private var playing = true
+    private val wakeLockHandler = Handler(Looper.getMainLooper())
+    private val wakeLockRenewRunnable = object : Runnable {
+        override fun run() {
+            if (!playing) return
+            renewWakeLock()
+            wakeLockHandler.postDelayed(this, WAKE_LOCK_RENEW_MS)
+        }
+    }
 
     private val sessionCallback = object : MediaSession.Callback() {
         override fun onPlay() = setPlaying(true)
@@ -68,6 +76,10 @@ class MediaPlaybackService : Service() {
             ACTION_PAUSE -> setPlaying(false)
         }
         ensureWakeLock()
+        wakeLockHandler.removeCallbacks(wakeLockRenewRunnable)
+        if (playing) {
+            wakeLockHandler.postDelayed(wakeLockRenewRunnable, WAKE_LOCK_RENEW_MS)
+        }
         startForeground(NOTIFICATION_ID, buildNotification())
         return START_NOT_STICKY
     }
@@ -75,7 +87,14 @@ class MediaPlaybackService : Service() {
     private fun setPlaying(value: Boolean) {
         playing = value
         userPaused = !value
-        if (value) ensureWakeLock() else releaseWakeLock()
+        if (value) {
+            ensureWakeLock()
+            wakeLockHandler.removeCallbacks(wakeLockRenewRunnable)
+            wakeLockHandler.postDelayed(wakeLockRenewRunnable, WAKE_LOCK_RENEW_MS)
+        } else {
+            wakeLockHandler.removeCallbacks(wakeLockRenewRunnable)
+            releaseWakeLock()
+        }
         runOnPage(AdBlocker.mediaControlJs(if (value) "play" else "pause"))
         updatePlaybackState()
         refreshNotification()
@@ -83,10 +102,17 @@ class MediaPlaybackService : Service() {
 
     private fun ensureWakeLock() {
         val lock = wakeLock ?: return
-        if (!lock.isHeld) lock.acquire(10 * 60 * 1000L)
+        if (!lock.isHeld) lock.acquire(WAKE_LOCK_TIMEOUT_MS)
+    }
+
+    private fun renewWakeLock() {
+        val lock = wakeLock ?: return
+        if (lock.isHeld) lock.release()
+        lock.acquire(WAKE_LOCK_TIMEOUT_MS)
     }
 
     private fun releaseWakeLock() {
+        wakeLockHandler.removeCallbacks(wakeLockRenewRunnable)
         wakeLock?.let { if (it.isHeld) it.release() }
     }
 
@@ -210,6 +236,8 @@ class MediaPlaybackService : Service() {
         private const val CHANNEL_ID = "media_playback"
         private const val NOTIFICATION_ID = 1001
         private const val SESSION_TAG = "LightweightBrowserMedia"
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
+        private const val WAKE_LOCK_RENEW_MS = 5 * 60 * 1000L
 
         /** Set by the notification so the activity will not auto-resume. */
         @Volatile

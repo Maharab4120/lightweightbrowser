@@ -142,18 +142,24 @@ class MainActivity : Activity() {
         val savedIds = savedInstanceState?.getStringArrayList(KEY_TAB_IDS)
         if (savedIds.isNullOrEmpty()) {
             createNewTab()
-
-            val incomingUrl = intent?.data?.takeIf { data ->
-                data.scheme?.equals("http", ignoreCase = true) == true ||
-                    data.scheme?.equals("https", ignoreCase = true) == true
-            }?.toString()
-
-            if (!incomingUrl.isNullOrEmpty()) {
-                loadUrlInCurrentTab(incomingUrl)
-            }
         } else {
             restoreTabs(savedInstanceState, savedIds)
         }
+        handleIncomingIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(incoming: Intent?) {
+        val url = incoming?.data?.takeIf { data ->
+            data.scheme?.equals("http", ignoreCase = true) == true ||
+                data.scheme?.equals("https", ignoreCase = true) == true
+        }?.toString() ?: return
+        loadUrlInCurrentTab(url)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -945,7 +951,11 @@ class MainActivity : Activity() {
         currentTabId = tabId
 
         tabs.forEach { tab ->
-            tab.rootView?.visibility = if (tab.id == tabId) View.VISIBLE else View.GONE
+            val active = tab.id == tabId
+            tab.rootView?.visibility = if (active) View.VISIBLE else View.GONE
+            if (!active && tab.webView != null) {
+                tab.webView?.evaluateJavascript(AdBlocker.pauseBackgroundVideosJs(), null)
+            }
         }
         MediaPlaybackService.registerWebView(currentTab()?.webView)
 
@@ -1473,11 +1483,9 @@ class MainActivity : Activity() {
     }
 
     private fun upgradeToHttps(url: String): String {
-        return if (url.startsWith("http://", ignoreCase = true)) {
-            "https://" + url.removePrefix("http://")
-        } else {
-            url
-        }
+        if (!url.startsWith("http://", ignoreCase = true)) return url
+        if (RequestContext.isLocalNetworkHost(hostFrom(url))) return url
+        return "https://" + url.removePrefix("http://")
     }
 
     private fun hostFrom(url: String?): String? {

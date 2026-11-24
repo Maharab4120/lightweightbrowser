@@ -38,6 +38,21 @@ internal object RequestContext {
             null
         }
     }
+
+    /** Localhost/LAN hosts are left on HTTP so local dev servers still work. */
+    fun isLocalNetworkHost(host: String?): Boolean {
+        val value = host?.lowercase(Locale.ROOT)?.trimEnd('.') ?: return false
+        if (value == "localhost" || value.endsWith(".localhost") ||
+            value.endsWith(".local")
+        ) return true
+        if (value.contains(':')) return value == "::1" || value.startsWith("fe80:")
+        val parts = value.split('.').map { it.toIntOrNull() ?: return false }
+        if (parts.size != 4 || parts.any { it !in 0..255 }) return false
+        return parts[0] == 127 || parts[0] == 10 ||
+            (parts[0] == 172 && parts[1] in 16..31) ||
+            (parts[0] == 192 && parts[1] == 168) ||
+            (parts[0] == 169 && parts[1] == 254)
+    }
 }
 
 internal data class BlockedResponseSpec(

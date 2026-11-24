@@ -16,6 +16,9 @@ Privacy shield → **Engine**.
 - DuckDuckGo-style search from a single omnibox.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
 - Pull down from the top of a page to reload it.
+- Links from other apps reuse the existing browser task instead of spawning a second copy.
+- Localhost/LAN addresses are not upgraded to HTTPS.
+- Video in inactive tabs is paused; background audio is left alone.
 - Optional DNS filter using a local VPN route only for `10.23.42.2/32`.
 - YouTube opens in the browser like any other site; no native-app handoff.
 - YouTube ad endpoints are filtered while player/video hosts stay allowed.

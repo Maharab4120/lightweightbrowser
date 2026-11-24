@@ -249,6 +249,18 @@ object AdBlocker {
         """.trimIndent()
     }
 
+    /** Pauses video in an inactive tab without disturbing background audio. */
+    fun pauseBackgroundVideosJs(): String = """
+        (function () {
+            try {
+                var videos = document.querySelectorAll('video');
+                for (var i = 0; i < videos.length; i++) {
+                    if (!videos[i].paused) videos[i].pause();
+                }
+            } catch (e) {}
+        })();
+    """.trimIndent()
+
     fun shouldBlock(request: WebResourceRequest, pageHost: String? = null): Boolean {
         if (request.isForMainFrame) return false
         return shouldBlock(request.url.toString(), isForMainFrame = false, pageHost = pageHost)
@@ -279,7 +291,9 @@ object AdBlocker {
         // Rule domains are lowercased at load time; CSS selectors are not.
         val normalizedHost = host.lowercase(Locale.ROOT)
         val selectors = LinkedHashSet<String>()
-        // Host-specific rules first so they win the 2,200-selector budget.
+        // Built-in high-signal selectors first, then host-specific rules, then
+        // the large generic set. Chunked CSS makes a bad selector harmless.
+        selectors.addAll(extraCosmeticSelectors)
         for ((domain, rules) in domainSelectors) {
             if (hostMatchesDomain(normalizedHost, domain)) {
                 selectors.addAll(rules)
@@ -295,7 +309,6 @@ object AdBlocker {
         }
         // Generic rules last.
         selectors.addAll(genericSelectors)
-        selectors.addAll(extraCosmeticSelectors)
 
         selectors.removeAll(genericExceptions)
         for ((domain, rules) in domainCosmeticExceptions) {
@@ -306,7 +319,7 @@ object AdBlocker {
 
         // One unparsable selector invalidates its whole comma-separated rule,
         // so keep each rule small. The CSS still hides nodes added later.
-        val css = selectors.take(2200).chunked(400).joinToString("\n") { chunk ->
+        val css = selectors.chunked(400).joinToString("\n") { chunk ->
             chunk.joinToString(",") +
                 "{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}"
         }

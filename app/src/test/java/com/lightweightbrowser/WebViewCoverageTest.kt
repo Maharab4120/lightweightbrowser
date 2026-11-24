@@ -129,6 +129,25 @@ class WebViewCoverageTest {
     }
 
     @Test
+    fun localAndLanHostsAreExemptFromHttpsUpgrade() {
+        assertTrue(RequestContext.isLocalNetworkHost("localhost"))
+        assertTrue(RequestContext.isLocalNetworkHost("127.0.0.1"))
+        assertTrue(RequestContext.isLocalNetworkHost("192.168.1.10"))
+        assertTrue(RequestContext.isLocalNetworkHost("10.0.0.5"))
+        assertTrue(RequestContext.isLocalNetworkHost("172.20.1.2"))
+        assertTrue(RequestContext.isLocalNetworkHost("printer.local"))
+        assertFalse(RequestContext.isLocalNetworkHost("example.com"))
+        assertFalse(RequestContext.isLocalNetworkHost("8.8.8.8"))
+    }
+
+    @Test
+    fun inactiveTabsOnlyPauseVideo() {
+        val js = AdBlocker.pauseBackgroundVideosJs()
+        assertTrue(js.contains("querySelectorAll('video')"))
+        assertFalse(js.contains("audio"))
+    }
+
+    @Test
     fun patternMatcherFollowsFailureChain() {
         val core = KotlinBlockerCore().apply {
             init(mapOf("block_patterns.txt" to listOf("aa", "bbaaa")))
