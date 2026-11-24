@@ -16,6 +16,7 @@ Privacy shield → **Engine**.
 - DuckDuckGo-style search from a single omnibox.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
 - Pull down from the top of a page to reload it.
+- Save button for direct MP4/WebM/audio links found on a page; uses Android DownloadManager.
 - Links from other apps reuse the existing browser task instead of spawning a second copy.
 - Localhost/LAN addresses are not upgraded to HTTPS, and cleartext is permitted only for those cases and for the explicit HTTP fallback warning flow.
 - Video in inactive tabs is paused; background audio is left alone.

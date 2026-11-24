@@ -29,7 +29,6 @@ import android.view.inputmethod.InputMethodManager
 import android.window.OnBackInvokedDispatcher
 import android.webkit.CookieManager
 import android.webkit.RenderProcessGoneDetail
-import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -79,6 +78,7 @@ class MainActivity : Activity() {
     private lateinit var forwardButton: TextView
     private lateinit var reloadButton: TextView
     private lateinit var homeButton: TextView
+    private lateinit var downloadButton: TextView
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var themeModeAtLaunch: String = THEME_SYSTEM
@@ -250,6 +250,7 @@ class MainActivity : Activity() {
         forwardButton = findViewById(R.id.forwardButton)
         reloadButton = findViewById(R.id.reloadButton)
         homeButton = findViewById(R.id.homeButton)
+        downloadButton = findViewById(R.id.downloadButton)
     }
 
     private fun setupListeners() {
@@ -297,6 +298,11 @@ class MainActivity : Activity() {
         }
         homeButton.setOnClickListener {
             currentTab()?.let { showSpeedDial(it) }
+        }
+        downloadButton.setOnClickListener {
+            val current = currentTab() ?: return@setOnClickListener
+            val url = current.detectedVideoUrl ?: return@setOnClickListener
+            handleDownload(current, url, null, null, null)
         }
 
         chromePeek.setOnClickListener { setChromeVisible(true) }
@@ -535,6 +541,7 @@ class MainActivity : Activity() {
         tab.url = ""
         tab.title = "New Tab"
         tab.currentHost = null
+        tab.detectedVideoUrl = null
 
         val speedDial = createSpeedDialView(tab)
         tab.rootView = speedDial
@@ -598,9 +605,16 @@ class MainActivity : Activity() {
                     setOf("*")
                 ) { _, message, _, isMainFrame, _ ->
                     val data = if (isMainFrame) message.data else null
-                    when (data) {
-                        "media:1" -> browserJsBridge.onMediaState(true)
-                        "media:0" -> browserJsBridge.onMediaState(false)
+                    when {
+                        data == "media:1" -> browserJsBridge.onMediaState(true)
+                        data == "media:0" -> browserJsBridge.onMediaState(false)
+                        data?.startsWith("video:") == true -> {
+                            val mediaUrl = data.removePrefix("video:")
+                            if (VideoDownloads.isDirectMediaUrl(mediaUrl)) {
+                                tab.detectedVideoUrl = mediaUrl
+                                if (tab.id == currentTabId) updateNavButtons()
+                            }
+                        }
                     }
                 }
             }
@@ -845,6 +859,7 @@ class MainActivity : Activity() {
                         tab.currentHost = hostFrom(url)
                     }
                     tab.title = hostFrom(url) ?: "Loading..."
+                    tab.detectedVideoUrl = null
                     progressBar.visibility = View.VISIBLE
                     if (tab.id == currentTabId) urlEditText.setText(url ?: "")
                     if (!tab.documentStartInstalled && BlockerEngineManager.isEnabled()) {
@@ -883,6 +898,10 @@ class MainActivity : Activity() {
                     }
                     // Media monitor is independent of ad blocking.
                     view?.evaluateJavascript(AdBlocker.mediaMonitorJs(), null)
+
+                    tab.detectedVideoUrl = null
+                    if (tab.id == currentTabId) updateNavButtons()
+                    view?.evaluateJavascript(AdBlocker.videoDetectionJs(), null)
                 }
 
                 override fun onReceivedError(
@@ -1052,6 +1071,7 @@ class MainActivity : Activity() {
         setButtonEnabled(backButton, webView?.canGoBack() == true)
         setButtonEnabled(forwardButton, webView?.canGoForward() == true)
         setButtonEnabled(reloadButton, webView != null)
+        setButtonEnabled(downloadButton, currentTab()?.detectedVideoUrl != null)
     }
 
     private fun setButtonEnabled(button: TextView, enabled: Boolean) {
@@ -1451,7 +1471,7 @@ class MainActivity : Activity() {
             return
         }
 
-        val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+        val fileName = VideoDownloads.fileNameFrom(url, contentDisposition, mimeType)
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle(fileName)
             .setDescription("From ${RequestContext.hostOf(url) ?: "the web"}")

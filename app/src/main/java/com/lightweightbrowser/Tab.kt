@@ -27,4 +27,7 @@ class Tab(
 
     /** True when androidx.webkit document-start scripts are installed on this WebView. */
     var documentStartInstalled: Boolean = false
+
+    /** Direct media URL found on this page, offered through the Save button. */
+    var detectedVideoUrl: String? = null
 }

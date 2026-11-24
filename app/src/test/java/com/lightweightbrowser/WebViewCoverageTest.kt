@@ -129,6 +129,19 @@ class WebViewCoverageTest {
     }
 
     @Test
+    fun directMediaLinksAreDetectedAndNamed() {
+        assertTrue(VideoDownloads.isDirectMediaUrl("https://site.test/clip.mp4?token=1"))
+        assertTrue(VideoDownloads.isDirectMediaUrl("https://site.test/audio/track.WEBM"))
+        assertFalse(VideoDownloads.isDirectMediaUrl("https://www.youtube.com/watch?v=abc"))
+        assertFalse(VideoDownloads.isDirectMediaUrl("https://site.test/page.html"))
+        assertEquals("clip.mp4", VideoDownloads.fileNameFrom("https://site.test/clip.mp4", null, null))
+        assertEquals(
+            "movie.mp4",
+            VideoDownloads.fileNameFrom("https://site.test/stream", "attachment; filename=movie.mp4", null)
+        )
+    }
+
+    @Test
     fun localAndLanHostsAreExemptFromHttpsUpgrade() {
         assertTrue(RequestContext.isLocalNetworkHost("localhost"))
         assertTrue(RequestContext.isLocalNetworkHost("127.0.0.1"))

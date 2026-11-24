@@ -268,6 +268,28 @@ object AdBlocker {
         """.trimIndent()
     }
 
+    /** Reports a direct media URL so the browser can offer a Save action. */
+    fun videoDetectionJs(): String = """
+        (function () {
+            if (window.__lwVideoDetect) return;
+            window.__lwVideoDetect = true;
+            function report() {
+                if (window.__lwVideoReported) return;
+                var nodes = document.querySelectorAll('video[src],source[src]');
+                for (var i = 0; i < nodes.length; i++) {
+                    var src = nodes[i].getAttribute('src') || '';
+                    if (/\.(mp4|webm|mkv|mov|m4v|ogv|ogg|3gp|mp3|m4a|wav|aac)(\?|#|$)/i.test(src)) {
+                        window.__lwVideoReported = true;
+                        try { LWBridge.postMessage('video:' + src); } catch (e) {}
+                        return;
+                    }
+                }
+            }
+            setTimeout(report, 1200);
+            document.addEventListener('play', report, true);
+        })();
+    """.trimIndent()
+
     /** Pauses video in an inactive tab without disturbing background audio. */
     fun pauseBackgroundVideosJs(): String = """
         (function () {
