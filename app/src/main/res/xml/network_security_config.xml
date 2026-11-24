@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- The local MITM CA is bundled solely for the 127.0.0.1 YouTube proxy. -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Public URLs are upgraded to HTTPS in code. Cleartext is allowed only so
+         localhost/LAN dev servers and the explicit HTTP fallback can work. -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="@raw/lw_ca" />

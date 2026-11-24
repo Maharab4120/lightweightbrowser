@@ -17,7 +17,7 @@ Privacy shield → **Engine**.
 - Customizable home shortcuts (add, edit, remove) stored separately from browsing data.
 - Pull down from the top of a page to reload it.
 - Links from other apps reuse the existing browser task instead of spawning a second copy.
-- Localhost/LAN addresses are not upgraded to HTTPS.
+- Localhost/LAN addresses are not upgraded to HTTPS, and cleartext is permitted only for those cases and for the explicit HTTP fallback warning flow.
 - Video in inactive tabs is paused; background audio is left alone.
 - Optional DNS filter using a local VPN route only for `10.23.42.2/32`.
 - YouTube opens in the browser like any other site; no native-app handoff.
