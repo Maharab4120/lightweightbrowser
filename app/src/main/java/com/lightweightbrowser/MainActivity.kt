@@ -71,6 +71,10 @@ class MainActivity : Activity() {
     private lateinit var chromePeek: View
     private lateinit var tabContentContainer: FrameLayout
     private lateinit var swipeRefresh: TabSwipeRefreshLayout
+    private lateinit var fullscreenContainer: FrameLayout
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var systemUiBeforeFullscreen = 0
     private lateinit var backButton: TextView
     private lateinit var forwardButton: TextView
     private lateinit var reloadButton: TextView
@@ -232,6 +236,7 @@ class MainActivity : Activity() {
         chromePeek = findViewById(R.id.chromePeek)
         tabContentContainer = findViewById(R.id.tabContentContainer)
         swipeRefresh = findViewById(R.id.swipeRefresh)
+        fullscreenContainer = findViewById(R.id.fullscreenContainer)
         swipeRefresh.canScrollUpProvider = {
             val current = currentTab()
             val web = current?.webView
@@ -619,6 +624,28 @@ class MainActivity : Activity() {
             attachChromeGesture(this)
 
             webChromeClient = object : WebChromeClient() {
+                override fun onShowCustomView(
+                    view: View?,
+                    callback: WebChromeClient.CustomViewCallback?
+                ) {
+                    if (view == null || customView != null) {
+                        callback?.onCustomViewHidden()
+                        return
+                    }
+                    customView = view
+                    customViewCallback = callback
+                    fullscreenContainer.addView(
+                        view,
+                        FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+                    )
+                    fullscreenContainer.visibility = View.VISIBLE
+                    enterImmersiveFullscreen()
+                }
+
+                override fun onHideCustomView() {
+                    exitFullscreenMode()
+                }
+
                 /**
                  * Give window.open()/target="_blank" a real WebView via the
                  * transport. The popup becomes a normal tab so OAuth and payment
@@ -1519,6 +1546,31 @@ class MainActivity : Activity() {
 
     private val MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT
 
+    @Suppress("DEPRECATION")
+    private fun enterImmersiveFullscreen() {
+        systemUiBeforeFullscreen = window.decorView.systemUiVisibility
+        window.decorView.systemUiVisibility = systemUiBeforeFullscreen or
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+    }
+
+    @Suppress("DEPRECATION")
+    private fun exitFullscreenMode() {
+        if (customView == null) return
+        fullscreenContainer.removeAllViews()
+        fullscreenContainer.visibility = View.GONE
+        customView = null
+        customViewCallback?.onCustomViewHidden()
+        customViewCallback = null
+        window.decorView.systemUiVisibility = systemUiBeforeFullscreen
+        val chrome = if (chromeVisible) View.VISIBLE else View.GONE
+        topToolbar.visibility = chrome
+        tabStrip.visibility = chrome
+        bottomToolbar.visibility = chrome
+        chromePeek.visibility = if (chromeVisible) View.GONE else View.VISIBLE
+    }
+
     private fun registerBackHandler() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerOnBackInvoked()
@@ -1540,6 +1592,10 @@ class MainActivity : Activity() {
      * activity itself should close.
      */
     private fun handleBack(): Boolean {
+        if (customView != null) {
+            exitFullscreenMode()
+            return true
+        }
         if (!chromeVisible) {
             setChromeVisible(true)
             return true
@@ -1593,6 +1649,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        exitFullscreenMode()
         mediaPlaying = false
         mediaHandler.removeCallbacks(stopMediaRunnable)
         mediaHandler.removeCallbacks(resumeMediaRunnable)
